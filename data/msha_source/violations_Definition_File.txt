@@ -1,0 +1,56 @@
+TABLE_NAME|COLUMN_NAME|DATA_TYPE|DATA_LENGTH|FIELD_DESCRIPTION
+VIOLATIONS|EVENT_NO|VARCHAR2|7|A preassigned number used to identify each inspection, investigation, audit, survey, etc.  Use to join to the Inspections table.
+VIOLATIONS|INSPECTION_BEGIN_DT|DATE|10|Start date of the inspection (mm/dd/yyyy).
+VIOLATIONS|INSPECTION_END_DT|DATE|10|Inspection close out date (mm/dd/yyyy).
+VIOLATIONS|VIOLATION_NO|VARCHAR2|30|Citation/order number assigned to each citation written during an inspection.  This is a unique key to the file.
+VIOLATIONS|CONTROLLER_ID|VARCHAR2|7|Identification number assigned by MSHA Assessments for a Legal Entity acting as a controller of an operator at the time the violation was cited.   May not contain data (null values) if this record pertains to a violation issued to a contractor.
+VIOLATIONS|CONTROLLER_NAME|VARCHAR2|72|Name of the controller active at the time the violation was cited.  May not contain data (null values) if this record pertains to a violation issued to a contractor.
+VIOLATIONS|VIOLATOR_ID|VARCHAR2|7|Identification number assigned by MSHA for a Legal Entity acting as an operator at a mine at the time the violation was cited.  May not contain data (null values) if this record pertains to a violation issued to a contractor.
+VIOLATIONS|VIOLATOR_NAME|VARCHAR2|60|Name of the operator active at the time the violation was cited.  May not contain data (null values) if this record pertains to a violation issued to a contractor.
+VIOLATIONS|VIOLATOR_TYPE_CD|VARCHAR2|20|Each Violator record represents an entity (Operator, Contractor, Agent or Miner) that has one or more violations at a mine.
+VIOLATIONS|MINE_ID|VARCHAR2|7|Mine id of the mine where the violation was issued.
+VIOLATIONS|MINE_NAME|VARCHAR2|50|Name of the mine where the violation was issued.
+VIOLATIONS|MINE_TYPE|VARCHAR2|20|Mine type of the mine where the violation has been issued:  Facility, Surface or Underground.
+VIOLATIONS|COAL_METAL_IND|VARCHAR2|1|Identifies if the record is for a Coal or Metal/Non-Metal mine.
+VIOLATIONS|CONTRACTOR_ID|VARCHAR2|10|Code identifying the contractor to whom the citation or order was issued.  May not contain data (null values) if the contractor was not cited.
+VIOLATIONS|VIOLATION_ISSUE_DT|DATE|10|Date the citation or order was issued by the MSHA inspector.
+VIOLATIONS|VIOLATION_OCCUR_DT|DATE|10|Actual date of occurrence of the violation.  
+VIOLATIONS|CAL_YR|NUMBER|4|Calendar year during which the citation/order was issued by the MSHA inspector.
+VIOLATIONS|CAL_QTR|NUMBER|1|Calendar Quarter of the date the citation or order was issued by the MSHA inspector.
+VIOLATIONS|FISCAL_YR|NUMBER|4|Fiscal Year of the date the citation or order was issued by the MSHA inspector.  MSHA's fiscal year begins October 1 and ends September 30.
+VIOLATIONS|FISCAL_QTR|NUMBER|1|Fiscal Quarter of the date the citation or order was issued by the MSHA inspector.
+VIOLATIONS|VIOLATION_ISSUE_TIME|VARCHAR2|4|Time (24 hour) the citation or order was issued by the MSHA inspector.
+VIOLATIONS|SIG_SUB|VARCHAR2|1|An indicator as to whether or not the gravity is determined by the inspector to be significant and substantial.  If this is 'Y', the inspector has indicated that based upon the particular facts surrounding the violation there exists a reasonable likelihood the hazard contributed to will result in an injury or illness of a reasonably serious nature.
+VIOLATIONS|SECTION_OF_ACT|VARCHAR2|20|Section of the Act under which the citation/order was issued.  May not contain data (null values).
+VIOLATIONS|PART_SECTION|VARCHAR2|20|Code of Federal Regulations: Part/section of Title 30 CFR violated in format PPSSSSSXXXX where (P) Part, (S) Section and (X) Suffix.  Four-digit section numbers are expanded to five within one leading zero.  May not contain data (null values).
+VIOLATIONS|SECTION_OF_ACT_1|VARCHAR2|20|Primary Section of Act which gives the MSHA Inspector the authority to take the action specified by this Issuance.   More than one type of action may be cited.
+VIOLATIONS|SECTION_OF_ACT_2|VARCHAR2|20|Secondary Section of Act which gives the MSHA Inspector the authority to take the action specified by this Issuance at Metal/Non-Metal mines only.  More than one type of action may be cited.
+VIOLATIONS|CIT_ORD_SAFE|VARCHAR2|20|Specifies the type of Citation: Citation, Order, Safeguard, Written Notice or Notice.
+VIOLATIONS|ORIG_TERM_DUE_DT|DATE|10|Original date by which the cited condition was to be abated.  Original time by which the cited condition was to be abated. 
+VIOLATIONS|ORIG_TERM_DUE_TIME|VARCHAR2|4|Original time by which the cited condition was to be abated.   
+VIOLATIONS|LATEST_TERM_DUE_DT|DATE|10|Date by which the conditions cited in the citation/order are to be abated.  For Metal mines, this can be the termination due date to which the citation/order is extended.  
+VIOLATIONS|LATEST_TERM_DUE_TIME|VARCHAR2|4|Time by which the conditions cited on the citation/order are to be abated.  
+VIOLATIONS|TERMINATION_DT|DATE|10|Date on which the citation/order was terminated.  May not contain data (null values) if citation has not yet been terminated.
+VIOLATIONS|TERMINATION_TIME|VARCHAR2|5|Time of day (24 hour) at which the citation/order was terminated.  May not contain data (null values) if citation has not yet been terminated.
+VIOLATIONS|TERMINATION_TYPE|VARCHAR2|20|Code identifying the type of termination:  Issued, ReplacedByOrder or Terminated.
+VIOLATIONS|VACATE_DT|DATE|10|Date on which the citation/order was vacated.  May not contain data (null values) if the violation was not vacated.
+VIOLATIONS|VACATE_TIME|VARCHAR2|5|Time of day (24 hour) at which the citation/order was vacated.  May not contain data (null values) if the violation was not vacated.
+VIOLATIONS|INITIAL_VIOL_NO|VARCHAR2|30|This is the preceding citation record when there is a need to relate a citation to a previous one. For example this would apply when an order follows a citation.  This relationship is needed to calculate the good faith reduction penalty points.  May not contain data (null values).
+VIOLATIONS|REPLACED_BY_ORDER_NO|VARCHAR2|30|Order number which replaced the original citation.  May not contain data (null values) if situation does not apply.
+VIOLATIONS|LIKELIHOOD|VARCHAR2|20|This is a measure of the seriousness of the violation being cited as measured by the likelihood of the occurrence of an accident:  Highly, NoLikelihood, Occurred, Reasonably or Unlikely.  May not contain data (null values) if situation does not apply.
+VIOLATIONS|INJ_ILLNESS|VARCHAR2|20|Value assigned to a violation for gravity of injury.  Measure of seriousness of violation being cited as measured by severity of the injury or illness to persons if accident were to occur due to the conditions of the violation:  Fatal, LostDays, NoLostDays or Permanent.
+VIOLATIONS|NO_AFFECTED|NUMBER|3|This is a measure of the number of persons affected or potentially affected by the conditions at the Mine due to the violation.  Can be zero.
+VIOLATIONS|NEGLIGENCE|VARCHAR2|20|Codes representing the degree of negligence that the Inspector assigned to the violator due to the violation:  HighNegligence, LowNegligence, ModNegligence, NoNegligence or Reckless.  A high degree of negligence is assigned when the operator was in a position to be aware of the condition that contributed to a dangerous situation and there were no mitigating circumstances, or if there are unique aggravating circumstances associated with the violation, such as repeated past violations of the same standard at the mine.
+VIOLATIONS|WRITTEN_NOTICE|VARCHAR2|1|Indicates if this citation is a result of a Miner or Agent notice of complaint to MSHA (written notice 103(g)):  ('Y'  or 'N').  May not contain data (null values).
+VIOLATIONS|ENFORCEMENT_AREA|VARCHAR2|20|Specifies the enforcement areas affected by the violating condition or practice constitute a health hazard, safety hazard, both or other type of hazard.  May not contain data (null values).
+VIOLATIONS|SPECIAL_ASSESS|VARCHAR2|1|Specifies whether this citation has been designated for Special Assessment based on Special Assessment Review (Y or N).
+VIOLATIONS|PRIMARY_OR_MILL|VARCHAR2|20|A code indicating if the Violation was observed in the Primary Mine location or in an associated Mill (Metal/Non-Metal only).  May not contain data (null values).
+VIOLATIONS|RIGHT_TO_CONF_DT|DATE|10|Date the operator was advised of his right to a conference (Metal/Non-Metal only).  May not contain data (null values).
+VIOLATIONS|ASMT_GENERATED_IND|VARCHAR2|1|If the violator is an Operator or Contractor, the indicator is 'N'.  If the violator is an Agent, the indicator is 'Y'.  If the violator is a Miner, the indicator can be 'Y' or 'N'.  If none of the above, the indicator is '?'.
+VIOLATIONS|FINAL_ORDER_ISSUE_DT|DATE|10|Date that this assessment becomes a Final Order.  This date is set when the Certified Return Receipt date (CRR) is set.  Note that this can be a projected future date that is set as soon as the CRR is entered.  
+VIOLATIONS|PROPOSED_PENALTY|NUMBER|9,2|The original dollar value of the proposed penalty prior to any modifications such as those possibly resulting from a decision on a contested case.
+VIOLATIONS|AMOUNT_DUE|NUMBER|9,2|The current dollar value of the proposed assessment, reflecting any modifications that have been made since it was originally assessed
+VIOLATIONS|AMOUNT_PAID|NUMBER|9,2|The total dollar value of all payments applied to this proposed assessment to date.
+VIOLATIONS|BILL_PRINT_DT|DATE|10|Date the bill was printed.  This date always represents the first time the bill was printed.
+VIOLATIONS|LAST_ACTION_CD|VARCHAR2|30|Last action taken against this violation such as 1stDemandPrinted, BillingReady, ApprovedforTreasury and Proposed.  
+VIOLATIONS|LAST_ACTION_DT|DATE|10|Date the last action taken against this violation.  

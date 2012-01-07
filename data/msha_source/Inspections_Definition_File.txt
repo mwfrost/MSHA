@@ -1,0 +1,44 @@
+TABLE_NAME|COLUMN_NAME|DATA_TYPE|DATA_LENGTH|FIELD_DESCRIPTION
+INSPECTIONS|EVENT_NO|VARCHAR2|7|A unique number used to identify each inspection, investigation, audit, survey, etc. (event).  Primary key to join to the Violations table.  One event number can be associated with one or more violations.
+INSPECTIONS|MINE_ID|VARCHAR2|7|Identification number assigned to the operation inspected by MSHA .  Use mine id to join to Mines table.
+INSPECTIONS|INSPECTION_BEGIN_DT|DATE|10|Start date of the inspection  (mm/dd/yyyy).
+INSPECTIONS|INSPECTION_END_DT|DATE|10|Inspection close out date (mm/dd/yyyy).
+INSPECTIONS|CONTROLLER_ID|VARCHAR2|7|Identification number assigned by MSHA Assessments for a Legal Entity acting as a controller of an operator at the time of the inspection.   May not contain data (null values) if this record pertains to a contractor working at the mine.
+INSPECTIONS|CONTROLLER_NAME|VARCHAR2|72|Name of the controller active at the time of the inspection.  May not contain data (null values) if this record pertains to a contractor working at the mine.
+INSPECTIONS|OPERATOR_ID|VARCHAR2|7|Identification number assigned by MSHA for a Legal Entity acting as an operator at a mine at the time of the inspection.  May not contain data (null values) if this record pertains to a contractor working at the mine.
+INSPECTIONS|OPERATOR_NAME|VARCHAR2|60|Name of the operator active at the time of the inspection.  May not contain data (null values) or a contractor name if this record pertains to a contractor working at the mine.
+INSPECTIONS|CAL_YEAR|NUMBER|4|Calendar Year of the End Date of the inspection.  May not contain data (null value) if the inspection remains open.
+INSPECTIONS|CAL_QTR|NUMBER|1|Calendar Quarter of the End Date of the inspection.  May not contain data (null value) if the inspection remains open.
+INSPECTIONS|FISCAL_YR|NUMBER|4|Fiscal Year of the End Date of the inspection.  MSHA's fiscal year begins October 1 and ends September 30.  May not contain data (null value) if the inspection remains open.
+INSPECTIONS|FISCAL_QTR|NUMBER|1|Fiscal quarter of the End Date of the inspection.  May not contain data (null value) if the inspection remains open.
+INSPECTIONS|INSPECT_OFFICE_CD|VARCHAR2|5|Office code of the inspector involved in the inspection.
+INSPECTIONS|ACTIVITY_CODE|VARCHAR2|20|Code used to identify the type of enforcement activity.
+INSPECTIONS|ACTIVITY|VARCHAR2|55|Description of the inspection activity codes.
+INSPECTIONS|ACTIVE_SECTIONS|NUMBER|5|Number of active working sections inspected.  Can contain zeroes.
+INSPECTIONS|IDLE_SECTIONS|NUMBER|5|Number of idle working sections inspected.  Can contain zeroes.
+INSPECTIONS|SHAFT_SLOPE_SINK|NUMBER|5|Number of shaft/slope sinking construction areas inspected.  Can contain zeroes.
+INSPECTIONS|IMPOUND_CONSTR|NUMBER|5|Number of impoundment construction operations inspected.  Can contain zeroes.
+INSPECTIONS|BLDG_CONSTR_SITES|NUMBER|5|Number of building construction sites inspected.  Can contain zeroes.
+INSPECTIONS|DRAGLINES|NUMBER|5|Number of draglines/shovel construction operations inspected.  Can contain zeroes.
+INSPECTIONS|UNCLASSIFIED_CONSTR|NUMBER|5|Number of other unclassified construction areas inspected.  Can contain zeroes.
+INSPECTIONS|CO_RECORDS|VARCHAR2|1|Company records inspected indicator (Y or N).
+INSPECTIONS|SURF_UG_MINE|VARCHAR2|1|Surface area/underground mine inspected indicator (Y or N).
+INSPECTIONS|SURF_FACILITY_MINE|VARCHAR2|1|Surface mine/facililty inspected indicator (Y or N).
+INSPECTIONS|REFUSE_PILES|VARCHAR2|1|Identified refuse piles inspected indicator (Y or N).
+INSPECTIONS|EXPLOSIVE_STORAGE|VARCHAR2|1|Explosives storage inspected indicator (Y or N).
+INSPECTIONS|OUTBY_AREAS|VARCHAR2|1|Outby areas inspected indicator(Y or N).
+INSPECTIONS|MAJOR_CONST|VARCHAR2|1|Major construction operation inspected indicator (Y or N).
+INSPECTIONS|SHAFTS_SLOPES|VARCHAR2|1|Shafts/slopes inspected indicator (Y or N).
+INSPECTIONS|IMPOUNDMENTS|VARCHAR2|1|Identified impoundments inspected indicator (Y or N).
+INSPECTIONS|MISC_AREA|VARCHAR2|1|Coal areas of inspection Not Elsewhere Classified (NEC) indicator (Y or N).
+INSPECTIONS|PROGRAM_AREA|VARCHAR2|60|Program area (Coal or Metal/Non-Metal) associated with the inspection.
+INSPECTIONS|SAMPLE_CNT_AIR|NUMBER|9,4|Number of air samples collected.  May not contain data (null values) if sample not taken.
+INSPECTIONS|SAMPLE_CNT_DUSTSPOT|NUMBER|9,4|Number of spot dust samples collected.  May not contain data (null values) if sample not taken.
+INSPECTIONS|SAMPLE_CNT_DUSTSURVEY|NUMBER|9,4|Number of survey samples collected.  May not contain data (null values) if sample not taken.
+INSPECTIONS|SAMPLE_CNT_RESPDUST|NUMBER|9,4|Number of respiratory dust samples collected.  May not contain data (null values) if sample not taken.
+INSPECTIONS|SAMPLE_CNT_NOISE|NUMBER|9,4|Number of noise samples collected.  May not contain data (null values) if sample not taken.
+INSPECTIONS|SAMPLE_CNT_OTHER|NUMBER|9,4|Number of other samples collected.  May not contain data (null values) if sample not taken.
+INSPECTIONS|NBR_INSPECTORS|NUMBER|5|Total number of inspectors working on this inspection.
+INSPECTIONS|TOTAL_ON_SITE_HOURS|NUMBER|5|Total hours recorded on the Weekly Time and Activity Data form: On-Site Inspection Time (MNM), MMU Pit Time (Coal), Outby (Coal UG Mines), Surface Area Time (Coal) and C/O Writing On Site (MNM, Coal) Reviews (Coal).
+INSPECTIONS|TOTAL_INSP_HOURS|NUMBER|5|Total hours recorded on the Weekly Time and Activity Data form: On-Site Inspection Time (MNM), MMU Pit Time (Coal), Outby (Coal UG mines), Surface Area Time (Coal), C/O Writing On Site (MNM,Coal) Reviews (Coal), C/O Writing Off Site, Travel Time and Other
+INSPECTIONS|COAL_METAL_IND|VARCHAR2|1|Identifies if the inspection was at a Coal or Metal/Non-Metal mine.

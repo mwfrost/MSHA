@@ -1,0 +1,21 @@
+TABLE_NAME|COLUMN_NAME|DATA_TYPE|DATA_LENGTH|FIELD_DESCRIPTION
+MINE ADDRESS|MINE_ID|VARCHAR2|7|Identification number assigned to the operation by MSHA.  Use mine_id to join to the Mines table.
+MINE ADDRESS|MINE_NAME|VARCHAR2|50|Mine name as designated on the Legal Id Form (LID) or Mine Information Form (MIF).
+MINE ADDRESS|CONTACT_TITLE|VARCHAR2|30|Contact title associated with this address.  May not contain data (null values).
+MINE ADDRESS|NEAREST_TOWN|VARCHAR2|30|The nearest town to the mine entered on the Mine Information Form (MIF).  May not contain data (null values).
+MINE ADDRESS|BUSINESS_NAME|VARCHAR2|50|Optional business name that can be used for this address association to allow a different name than the Legal Entity Name.
+MINE ADDRESS|STREET|VARCHAR2|80|The first line of a street address.  May not contain data (null values).
+MINE ADDRESS|PO_BOX|VARCHAR2|30|Post Office box.  May not contain data (null values).
+MINE ADDRESS|CITY|VARCHAR2|30|The literal name of a city.  May not contain data (null values).
+MINE ADDRESS|STATE_ABBR|VARCHAR2|2|Standard state abbreviation code.  May not contain data (null values).
+MINE ADDRESS|FIPS_STATE_CD|VARCHAR2|2|Federal Information Processing Standard (FIPS) numeric state code in which the operation is located.  May not contain data (null values).
+MINE ADDRESS|STATE|VARCHAR2|40|Literal name of a state or minor outlying island territory as defined in Federal Information Processing Standard (FIPS) Publication.  May not contain data (null values).
+MINE ADDRESS|ZIP_CD|VARCHAR2|9|The zip code plus 4.  This is only used for U.S. zip codes.  It is not used for foreign postal codes.  May not contain data (null values).
+MINE ADDRESS|COUNTRY|VARCHAR2|30|Country is used for foreign addresses.  May not contain data (null values).
+MINE ADDRESS|PROVINCE|VARCHAR2|20|Province is used for foreign addresses.  May not contain data (null values).
+MINE ADDRESS|POSTAL_CD|VARCHAR2|20|Used for foreign addresses.  May not contain data (null values).
+MINE ADDRESS|MINE_TYPE_CD|VARCHAR2|20|From the Legal ID (LID) form.  Values are Facility, Surface or Underground.
+MINE ADDRESS|MINE_STATUS|VARCHAR2|50|Current status of the mine.  Values are Abandoned, Abandoned and Sealed, Active, Intermittent, New Mine, NonProducing and Temporarily Idled (Coal only).
+MINE ADDRESS|MINE_STATUS_DT|DATE|10|Date the mine obtained the current status from the Mine Information Form (MIF).
+MINE ADDRESS|PRIMARY_SIC_CD|VARCHAR2|80|Description of the Standard Industrial Classification (SIC) code for the primary commodity at a mine.
+MINE ADDRESS|COAL_METAL_IND|VARCHAR2|1|Identifies if the mine is a Coal or Metal/Non-Metal mine.

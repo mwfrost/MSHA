@@ -1,0 +1,58 @@
+TABLE_NAME|COLUMN_NAME|DATA_TYPE|DATA_LENGTH|FIELD_DESCRIPTION
+ACCIDENTS|MINE_ID|VARCHAR2|7|Identification number assigned to the mine by MSHA.  It is the mine identification number of the mine where the accident/injury/illness occurred.  Use mine_id to join to the Mines and Inspections tables.  Use mine_id and cal_yr to join to mine_id and cal_
+ACCIDENTS|CONTROLLER_ID|VARCHAR2|7|Identification number assigned by MSHA Assessments for a Legal Entity acting as a controller of an operator at the time of the accident.   May not contain data (null values) if this record pertains to a contractor working at the mine.
+ACCIDENTS|CONTROLLER_NAME|VARCHAR2|60|Name of the controller active at the time of the accident.  May not contain data (null values) if this record pertains to a contractor working at the mine.
+ACCIDENTS|OPERATOR_ID|VARCHAR2|7|Identification number assigned by MSHA for a Legal Entity acting as an operator at a mine at the time of the accident.  May not contain data (null values) or a contractor id if the accident involved a contractor.
+ACCIDENTS|OPERATOR_NAME|VARCHAR2|60|Name of the operator active at the time of the accident.  May not contain data (null values) or a contractor name if the accident involved a contractor.
+ACCIDENTS|CONTRACTOR_ID|VARCHAR2|7|Identification number assigned by MSHA for companies working as contractors at a mine.  It is the contractor id of the contractor or contractor employee involved in the accident/injury.  May not contain data (null values) if the accident involved an opera
+ACCIDENTS|DOCUMENT_NO|VARCHAR2|12|Document number assigned to the accident/injury form.  The first number designates the type of document:  (1) employment, (2) injury and (3) closing document.  The next seven are the Julian date (YYYYDDD).  The last four characters are a sequential number
+ACCIDENTS|SUBUNIT_CD|VARCHAR2|2|Code that identifies the location within a mine where the accident/injury/illness occurred.
+ACCIDENTS|SUBUNIT|VARCHAR2|32|Description of the subunit code referring to the location within a mine where the accident/injury/illness occurred:  (01) Underground operation;  (02) Surface operation at underground mine;  (03) Strip, quarry or open pit;  (04) Auger (Coal only);  (05) C
+ACCIDENTS|ACCIDENT_DT|DATE|10|Date the accident/injury/illness occurred (mm/dd/yyyy).
+ACCIDENTS|CAL_YR|NUMBER|4|Calendar Year in which the accident/injury/illness occurred.  It is based on the accident date.
+ACCIDENTS|CAL_QTR|NUMBER|1|Calendar Quarter in which the accident/injury/illness occurred.  It is based on the accident date.
+ACCIDENTS|FISCAL_YR|NUMBER|4|Fiscal Year in which the accident/injury/illness occurred.  MSHA's fiscal year begins October 1 and ends September 30.  It is based on the accident date.
+ACCIDENTS|FISCAL_QTR|NUMBER|1|Fiscal Quarter in which the accident/injury/illness occurred.  It is based on the accident date.
+ACCIDENTS|ACCIDENT_TIME|NUMBER|4|Time the accident/injury/illness occurred (24-hour clock).
+ACCIDENTS|DEGREE_INJURY_CD|VARCHAR2|2|Code identifying the degree of injury/illness to the individual.
+ACCIDENTS|DEGREE_INJURY|VARCHAR2|30|Description of the degree of injury/illness to the individual:  (00) Accident only;  (01) Fatality;  (02) Permanent total or permanent partial disability;  (03) Days away from work only;  (04) Days away from work and restricted activity;  (05) Days restri
+ACCIDENTS|FIPS_STATE_CD|VARCHAR2|2|Federal Information Processing Standard (FIPS) state code.  It refers to the state in which accident/injury/illness occurred.
+ACCIDENTS|UG_LOCATION_CD|VARCHAR2|2|Code identifying the underground location where the accident/injury/illness occurred.
+ACCIDENTS|UG_LOCATION|VARCHAR2|28|Description of the underground location code where the accident/injury/illness occurred:  (01) Vertical shaft;  (02) Slope/inclined shaft;  (03) Face;  (04) Intersection;  (05) Underground shop/office;  (06) Last open crosscut;  (07) Inby permanent suppor
+ACCIDENTS|UG_MINING_METHOD_CD|VARCHAR2|2|Description of the underground mining method code where the accident/injury/illness occurred.
+ACCIDENTS|UG_MINING_METHOD|VARCHAR2|20|Description of the underground mining method code where the accident/injury/illness occurred:  (01) Longwall;  (02) Shortwall;  (03) Conventional Stoping;  (05) Continuous Miner;  (06) Hand;  (07) Caving;  (8) Other; (?) No Value Found.
+ACCIDENTS|MINING_EQUIP_CD|VARCHAR2|6|Code to designate the type of equipment involved in the incident.  May be '?' if invalid code.
+ACCIDENTS|MINING_EQUIP|VARCHAR2|56|Description for the type of mining equipment involved in the accident.  May be 'No Value Found' if invalid mining equipment code.
+ACCIDENTS|EQUIP_MFR_CD|VARCHAR2|4|Codes that identify the manufacturer of equipment involved in the incident.  May be '?' if invalid code.
+ACCIDENTS|EQUIP_MFR_NAME|VARCHAR2|50|Mining machine manufacturer of a machine involved in an accident.  May be 'No Value Found' if invalid equipment manufacture code.
+ACCIDENTS|EQUIP_MODEL_NO|VARCHAR2|25|Model number that identifies the equipment involved in the incident.
+ACCIDENTS|SHIFT_BEGIN_TIME|NUMBER|4|Time the shift started (24-hour clock) during which the incident occurred.
+ACCIDENTS|CLASSIFICATION_CD|VARCHAR2|2|Accident or injury classification code.  The accident classification identifies the circumstances which contributed most directly to the resulting accident.
+ACCIDENTS|CLASSIFICATION|VARCHAR2|37|Description of the accident classification code that identifies the circumstances which contributed most directly to the resulting accident.
+ACCIDENTS|ACCIDENT_TYPE_CD|VARCHAR2|2|The accident type code identifies the event which directly resulted in the reported injury/accident.
+ACCIDENTS|ACCIDENT_TYPE|VARCHAR2|30|Description of the accident type code.
+ACCIDENTS|NO_INJURIES|NUMBER|4|Number of reportable injuries or illnesses resulting from the accident.  Zero is a valid number if no employees were injured in the accident or if the injury was not reportable.
+ACCIDENTS|TOT_EXPER|NUMBER|4,2|Total mining experience of the person affected calculated in decimal years.  The calculation uses both the years and months experience.  May not contain data (null values).
+ACCIDENTS|MINE_EXPER|NUMBER|4,2|Total experience at a specific mine of the person affected calculated in decimal years.  The calculation uses both the years and months experience at the mine.  May not contain data (null values).
+ACCIDENTS|JOB_EXPER|NUMBER|4,2|Experience in the job title of the person affected calculated in decimal year.  The calculation uses both the years and months experience.  May not contain data (null values).
+ACCIDENTS|OCCUPATION_CD|VARCHAR2|3|Three-digit occupation code of the accident victim's regular job title.
+ACCIDENTS|OCCUPATION|VARCHAR2|40|Description of the occupation code.
+ACCIDENTS|ACTIVITY_CD|VARCHAR2|3|Code for the specific activity the accident victim was performing at the time of the incident.  May be '?' if invalid code.
+ACCIDENTS|ACTIVITY|VARCHAR2|33|Description of the activity code.  May be 'No Value Found' if activity code is invalid.
+ACCIDENTS|INJURY_SOURCE_CD|VARCHAR2|3|Code identifying the source of the injury or illness.  The source of injury identifies the object, substances, exposure or bodily motion which directly produced or inflicted the injury.  May be '?' if invalid code.
+ACCIDENTS|INJURY_SOURCE|VARCHAR2|25|Description of the injury source code.  May have a description of 'No Value Found' if invalid injury source code.
+ACCIDENTS|NATURE_INJURY_CD|VARCHAR2|3|The nature of injury identifies the injury in terms of its principle physical characteristics.  May be '?' if invalid code.
+ACCIDENTS|NATURE_INJURY|VARCHAR2|25|Description of the nature of the victim's injury.  May have a description of  'No Value Found' if invalid nature of injury code.
+ACCIDENTS|INJ_BODY_PART_CD|VARCHAR2|3|Code identifying the part of the body affected by an injury.  May be '?' if invalid code.
+ACCIDENTS|INJ_BODY_PART|VARCHAR2|39|Description of the part of the body affected by an injury.  May have a description of 'No Value Found' if invalid injured body part code.
+ACCIDENTS|SCHEDULE_CHARGE|NUMBER|4|Charge in days lost for any permanent injury/illness.  Example:  6000 days for a death, 2400 days for the loss of a foot at the ankle.  May not contain data (null values) if situation does not apply.
+ACCIDENTS|DAYS_RESTRICT|NUMBER|4|Number of days of restricted work activity due to the injury/illness.  May not contain data (null values) if situation does not apply.
+ACCIDENTS|DAYS_LOST|NUMBER|3|Actual days lost from work due to the injury/illness.  May not contain data (null values) if situation does not apply.
+ACCIDENTS|TRANS_TERM|VARCHAR2|1|Indicates if the injured/ill employee was permanently transferred or terminated (Y or N).  May not contain data (null values) if situation does not apply.
+ACCIDENTS|RETURN_TO_WORK_DT|DATE|10|Date the injured/ill employee returned to work (mm/dd/yyyy).  May not contain data (null values) if situation does not apply.
+ACCIDENTS|IMMED_NOTIFY_CD|VARCHAR2|2|Code describing if the accident is one of the 12 types immediately reportable to MSHA.
+ACCIDENTS|IMMED_NOTIFY|VARCHAR2|20|Description of the Immediate Notification code:  (01) Death; (02) Serious injury; (03) Entrapment; (04) Inundation; (05) Gas of dust ignition; (06) Mine fire; (07) Explosives; (08) Roof fall; (09) Outburst; (10) Impounding dam; (11) Hoisting; (12) Offsite
+ACCIDENTS|INVEST_BEGIN_DT|DATE|10|Date the MSHA accident  investigation started (mm/dd/yyyy).
+ACCIDENTS|NARRATIVE|VARCHAR2|384|Narrative description of the accident/injury/illness.
+ACCIDENTS|CLOSED_DOC_NO|VARCHAR2|12|Document number assigned to the Returned to Duty form. The first character is designated as a '3' for the closing document.  The next seven are the Julian date (YYYYDDD).  The last four characters are a sequential number.  May not contain data (null value
+ACCIDENTS|COAL_METAL_IND|VARCHAR2|1|Identifies if the accident occurred at a Coal or Metal/Non-Metal mine.
