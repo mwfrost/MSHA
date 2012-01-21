@@ -8,3 +8,5 @@ Tables include:
 * Inspections
 * Violations
 * Accidents
+
+The project structure uses the [ProjectTemplate](http://www.johnmyleswhite.com/notebook/2010/08/26/projecttemplate/) package by John Myles White.
