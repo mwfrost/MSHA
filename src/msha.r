@@ -37,17 +37,15 @@ adat$YR_QTR <- adat$CAL_YR + adat$CAL_QTR/4
 v_mine_qtr <- ddply(vdat, .(MINE_ID,MINE_NAME,VIOLATOR_NAME,YR_QTR), "nrow")
 names(v_mine_qtr) <- gsub("nrow","v_count_qtr",names(v_mine_qtr))
 
-# Use cumsum to calculate the number of violations in a period of trailing years trail_n
-v_mine_qtr <- v_mine_qtr[ order(v_mine_qtr$MINE_ID, v_mine_qtr$YR_QTR) ,]
 
-#example mine: 4604955
 
-# Annual rolling mean of quarterly violation count
-# ddply(v_mine_qtr[v_mine_qtr$MINE_ID==4604955,],"MINE_ID",function(x) data.frame(x, yr_vs=rollmean(x$v_count_qtr,trail_n,na.pad=TRUE,align="right")))
+# A high-violation example mine: 4604955
 
 # Cumulative violations in the trailing n quarters
 #######  From StackOverflow.com
 ##       http://stackoverflow.com/questions/8947952/rolling-sum-on-an-unbalanced-time-series
+v_mine_qtr <- v_mine_qtr[ order(v_mine_qtr$MINE_ID, v_mine_qtr$YR_QTR) ,]
+
 v_mine_qtr <- ddply(v_mine_qtr, .(MINE_ID), 
     function(datm) adply(datm, 1, 
          function(x) data.frame(v_lag3 =
