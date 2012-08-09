@@ -2,6 +2,6 @@ data_loading: off
 munging: off
 logging: off
 load_libraries: on
-libraries: reshape, plyr, ggplot2, stringr, lubridate, zoo
+libraries: reshape, plyr, ggplot2, stringr, lubridate, zoo, caret
 as_factors: on
 data_tables: off
