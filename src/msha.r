@@ -1,14 +1,15 @@
 
 # Mines
-mdat <- read.table('./data/msha_source/Mines.TXT', header=T, sep="|", fill=T, as.is=c(1:59),quote="")
+mdat <- read.table('./data/msha_source/Mines.TXT', header=T, sep="|", fill=T, as.is=c(1:59),quote="\"")
 mdat_wv <- subset(mdat, STATE == 'WV' & COAL_METAL_IND == 'C')
 
 # Inspections
+# to periodically rebuild this WV set of records, run ./munge/01-extract-wv.R
 idat <- read.csv("./data/wv_idat.csv")
 idat <- merge(idat, mdat_wv[,c('MINE_ID','CURRENT_MINE_NAME','CURRENT_CONTROLLER_NAME')])
 
 # Accidents
-adat <- read.table('./data/msha_source/Accidents.TXT', header=T, sep="|", fill=T, quote="",comment.char = "")
+adat <- read.table('./data/msha_source/Accidents.TXT', header=T, sep="|", fill=T, quote="\"",comment.char = "")
 # WV is FIPS 54
 adat <- subset(adat, FIPS_STATE_CD==54)
 adat <- merge(adat, mdat_wv[,c('MINE_ID','CURRENT_MINE_NAME','CURRENT_CONTROLLER_NAME')])
