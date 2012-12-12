@@ -1,0 +1,18 @@
+Analysis of MSHA Inspections, Violations, and Accident Data
+========================================================
+
+```{r chunklabel}
+require(reshape)
+require(plyr)
+require(ggplot2)
+require(lubridate)
+setwd('~/Code/MSHA/')
+```
+## Load Data
+
+### Load Mine Data
+```{r}
+mdat <- read.table('./data/msha_source/Mines.TXT', header=T, sep="|", fill=T, as.is=c(1:59),quote="\"")
+head(mdat)
+mdat_wv <- subset(mdat, STATE == 'WV' & COAL_METAL_IND == 'C')
+```

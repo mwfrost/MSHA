@@ -13,6 +13,7 @@ adat <- read.table('./data/msha_source/Accidents.TXT', header=T, sep="|", fill=T
 # WV is FIPS 54
 adat <- subset(adat, FIPS_STATE_CD==54)
 adat <- merge(adat, mdat_wv[,c('MINE_ID','CURRENT_MINE_NAME','CURRENT_CONTROLLER_NAME')])
+adat$accident.key <- seq(1:nrow(adat))
 
 
 # Violations
@@ -48,8 +49,64 @@ vxday <- ddply(vdat, .(violation.occur.dt), nrow)
 names(vxday) <- c('date','vcount')
 calendarHeat(subset(vxday, year(date)==2011)$date , subset(vxday, year(date)==2011)$vcount)
 
+
+# Normalize inspections, violations, and accidents into "event" objects
+events <- 
+  rbind(
+  data.frame(event='inspection', MINE_ID = idat$MINE_ID, event.day=idat$inspection.begin.dt, event.key=idat$EVENT_NO)
+  ,
+  data.frame(event='violation', MINE_ID = vdat$MINE_ID, event.day=vdat$violation.occur.dt,event.key=vdat$EVENT_NO) 
+  ,
+  data.frame(event='accident', MINE_ID = adat$MINE_ID, event.day=adat$accident.dt, event.key=adat$accident.key) 
+  )
+
+# edays, short for event days, is a temporary hack
+edays<-cast(events, event.day+MINE_ID~event, value='event.key', fun.aggregate='min')
+
+
+
+eventsRR <- subset(edays, MINE_ID == 4601318)
+
+eventsRR$day.decimal <- decimal_date(eventsRR$event.day)
+
+eventsRR$lastinsp <- ifelse(eventsRR$inspection > 0 & eventsRR$inspection < Inf, eventsRR$day.decimal , cummax(ifelse(eventsRR$inspection > 0 & eventsRR$inspection < Inf, eventsRR$day.decimal, 0))) 
+
+eventsRR$lastviol <- ifelse(eventsRR$violation > 0 & eventsRR$violation < Inf, eventsRR$day.decimal , cummax(ifelse(eventsRR$violation > 0 & eventsRR$violation < Inf, eventsRR$day.decimal, 0))) 
+
+
+eventsRR$lastacc <- ifelse(eventsRR$accident > 0 & eventsRR$accident < Inf, eventsRR$day.decimal , cummax(ifelse(eventsRR$accident > 0 & eventsRR$accident < Inf, eventsRR$day.decimal, 0))) 
+
+
+eventsRR$sinceinsp <- eventsRR$day.decimal - eventsRR$lastinsp 
+eventsRR$sinceviol <- eventsRR$day.decimal - eventsRR$lastviol
+eventsRR$sinceacc <- eventsRR$day.decimal - eventsRR$lastacc
+
+eventsRR$year <- floor(eventsRR$day.decimal)
+
+ggplot(subset(eventsRR, year> 2000)) + 
+  geom_line(aes(x=day.decimal - year, y=sinceinsp),color='blue') +
+#  geom_line(aes(x=day.decimal - year, y=sinceviol),color='black') +
+  geom_line(aes(x=day.decimal - year, y=sinceacc),color='red') +
+ facet_wrap('year')
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # Count, for every day, the days since an inspection, the days since a violation, and the days since an accident
-# Eaxmple mine: Robinson Run 4601318
+# Example mine: Robinson Run 4601318
 
 idays <- data.frame(
                 MINE_ID = 4601318,
@@ -72,6 +129,20 @@ calendarHeat(
   subset(idays, year(day)==2011)$day , 
   subset(idays, year(day)==2011)$yrssince  
   )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
