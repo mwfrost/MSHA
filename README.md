@@ -15,5 +15,7 @@ Tables include:
 
 ### Project Organization
 
-The project structure uses the [ProjectTemplate](http://www.johnmyleswhite.com/notebook/2010/08/26/projecttemplate/) package by John Myles White. the `/data/msha_source` folder contains the large source files and their definition files. The table of violations is over 500 MB, so for the purposes of this project, I have selected out mines in West Virginia using the `/munge/01-extract-wv-R` script.  
+I have built this project as an [RMarkdown](http://www.rstudio.com/ide/docs/r_markdown) document. 
+
+The `/data/msha_source` folder contains the large source files and their definition files. The table of violations is over 500 MB, so for the purposes of this project, I have selected out mines in West Virginia using the `/munge/01-extract-wv-R` script.  
 
