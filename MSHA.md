@@ -1,6 +1,8 @@
 Analysis of MSHA Inspections, Violations, and Accident Data
 ========================================================
 
+_An open and ongoing analysis of the data provided by the [US Mine Safety & Health Administration](http://www.msha.gov/OpenGovernmentData/OGIMSHA.asp). See [github.com/mwfrost/MSHA](https://github.com/mwfrost/MSHA) for details._
+
 
 ```r
 require(reshape)
@@ -52,7 +54,24 @@ require(lubridate)
 ```
 
 ```r
+require(xtable)
+```
+
+```
+## Loading required package: xtable
+```
+
+```r
+require(scales)
+```
+
+```
+## Loading required package: scales
+```
+
+```r
 setwd("~/Code/MSHA/")
+source("./lib/calendarHeat.r")
 ```
 
 ## Load Data
@@ -69,136 +88,190 @@ mdat <- read.table('./data/msha_source/Mines.TXT', header=T, sep="|", fill=T, as
 ```
 
 ```r
-head(mdat)
+t(head(mdat,3))
 ```
 
 ```
-##   MINE_ID              CURRENT_MINE_NAME COAL_METAL_IND CURRENT_MINE_TYPE
-## 1 4405782                      Mine No 2              C       Underground
-## 2 3605672            BURKHARDT OPERATION              M           Surface
-## 3 1800708          SHUFELT SAND & GRAVEL              M           Surface
-## 4 3600651 McAvoy Vitrified Brick Company              M           Surface
-## 5 3602299                Shamokin Quarry              M           Surface
-## 6 3606931                      King No 4              C           Surface
-##   CURRENT_MINE_STATUS CURRENT_STATUS_DT CURRENT_CONTROLLER_ID
-## 1           Abandoned        01/22/1982                C08906
-## 2           Abandoned        07/10/2003                M03183
-## 3              Active        11/08/2005                M38422
-## 4        Intermittent        09/23/1996                M36062
-## 5        Intermittent        02/19/2010                M00271
-## 6           Abandoned        05/01/1980                C02389
-##                   CURRENT_CONTROLLER_NAME CURRENT_OPERATOR_ID
-## 1                            Gibson James              P11985
-## 2                               Colas S A              L06066
-## 3                        Johnson  Shufelt              L38422
-## 4               Thomas B McAvoy III Trust              L36062
-## 5 New Enterprise Stone & Lime Company Inc              L00335
-## 6                         Owens Harold Jr              P10091
-##      CURRENT_OPERATOR_NAME STATE BOM_STATE_CD FIPS_CNTY_CD   FIPS_CNTY_NM
-## 1        Simplex Coal Corp    VA           44           27       Buchanan
-## 2    I A Construction Corp    PA           36          121        Venango
-## 3    Shufelt Sand & Gravel    MD           18           19     Dorchester
-## 4     McAvoy Brick Company    PA           36           29        Chester
-## 5  Eastern Industries Inc.    PA           36           97 Northumberland
-## 6   H Owens Mining Company    PA           36          111       Somerset
-##   CONG_DIST_CD COMPANY_TYPE CURRENT_CONTROLLER_BEGIN_DT DISTRICT OFFICE_CD
-## 1            9  Corporation                  10/01/1981      C05     C0502
-## 2            5  Corporation                  01/01/1950       M2     M2681
-## 3            1        Other                  08/01/1984       M2     M2621
-## 4            7  Corporation                  01/01/1950       M2     M2621
-## 5            6  Corporation                  10/24/2011       M2     M2621
-## 6           12        Other                  01/01/1980      C02     C0200
-##                  OFFICE_NAME ASSESS_CTRL_NO PRIMARY_SIC_CD
-## 1    Vansant VA Field Office                        122200
-## 2 Warrendale PA Field Office      000006077         144200
-## 3 Wyomissing PA Field Office      000285008         144200
-## 4 Wyomissing PA Field Office      000218465         145910
-## 5 Wyomissing PA Field Office      000276420         142902
-## 6            New-Stanton, PA                        122200
-##                    PRIMARY_SIC PRIMARY_SIC_CD_1 PRIMARY_SIC_CD_SFX
-## 1            Coal (Bituminous)             1222                  0
-## 2 Construction Sand and Gravel             1442                  0
-## 3 Construction Sand and Gravel             1442                  0
-## 4                 Common Shale             1459                 10
-## 5    Crushed, Broken Sandstone             1429                  2
-## 6            Coal (Bituminous)             1222                  0
-##   SECONDARY_SIC_CD SECONDARY_SIC SECONDARY_SIC_CD_1 SECONDARY_SIC_CD_SFX
-## 1               NA                               NA                   NA
-## 2               NA                               NA                   NA
-## 3               NA                               NA                   NA
-## 4               NA                               NA                   NA
-## 5               NA                               NA                   NA
-## 6               NA                               NA                   NA
-##   PRIMARY_CANVASS_CD PRIMARY_CANVASS SECONDARY_CANVASS_CD
-## 1                  2            Coal                   NA
-## 2                  5   SandAndGravel                   NA
-## 3                  5   SandAndGravel                   NA
-## 4                  7        Nonmetal                   NA
-## 5                  6           Stone                   NA
-## 6                  2            Coal                   NA
-##   SECONDARY_CANVASS             CURRENT_103I CURRENT_103I_DT
-## 1                   Removed From 103I Status      10/01/1981
-## 2                      Never Had 103I Status                
-## 3                      Never Had 103I Status                
-## 4                                                           
-## 5                      Never Had 103I Status                
-## 6                                                           
-##   PORTABLE_OPERATION PORTABLE_FIPS_ST_CD DAYS_PER_WEEK HOURS_PER_SHIFT
-## 1                  N                  NA             0              NA
-## 2                  N                  NA             5               8
-## 3                  N                  NA             5               8
-## 4                  N                  NA             5               8
-## 5                  N                  NA             5               8
-## 6                  N                  NA             0              NA
-##   PROD_SHIFTS_PER_DAY MAINT_SHIFTS_PER_DAY NO_EMPLOYEES PART48_TRAINING
-## 1                  NA                   NA           11               N
-## 2                   1                    0            0               Y
-## 3                   1                    0            6               Y
-## 4                   1                   NA            1               Y
-## 5                   1                    1           12               Y
-## 6                  NA                   NA           NA               N
-##   LONGITUDE LATITUDE AVG_MINE_HEIGHT MINE_GAS_CATEGORY_CD
-## 1     82.06    37.42              31                     
-## 2        NA       NA              NA                     
-## 3     76.64    39.05              NA                     
-## 4     77.19    41.20              NA                     
-## 5     76.52    40.78              NA                     
-## 6        NA       NA              NA                     
-##   METHANE_LIBERATION NO_PRODUCING_PITS NO_NONPRODUCING_PITS
-## 1                  0                NA                   NA
-## 2                 NA                NA                   NA
-## 3                 NA                NA                   NA
-## 4                 NA                NA                   NA
-## 5                 NA                NA                   NA
-## 6                 NA                NA                   NA
-##   NO_TAILING_PONDS PILLAR_RECOVERY_USED HIGHWALL_MINER_USED MULTIPLE_PITS
-## 1               NA                    N                   N             N
-## 2                0                    N                   N             N
-## 3                0                    N                   N             N
-## 4               NA                    N                   N             N
-## 5                0                    N                   N             N
-## 6               NA                    N                   N             N
-##   MINERS_REP_IND SAFETY_COMMITTEE_IND MILES_FROM_OFFICE
-## 1              N                    N                 0
-## 2              N                    N                70
-## 3              N                    N               160
-## 4              N                    N                40
-## 5              N                    N               240
-## 6              N                    N                 0
-##                                                                                                                                                      DIRECTIONS_TO_MINE
-## 1                                                                                                                                                                      
-## 2                                                                                                                                      Rt 322, 5 miles west of Franklin
-## 3                                                                    From Cambridge Route 50 East to Route 16 East, 4 miles.  Cemetary on right, mine entrance on left.
-## 4                                                                                                                                                Off Rte 23 McAvoy Lane
-## 5 From Reading, PA, Rt. 183 North to Rt. 901 West towards Shamokin, PA.  approx. 15 miles past intersection of Rt. 901 & I-81; company sign on left just before Rt. 61.
-## 6                                                                                                                                                                      
-##    NEAREST_TOWN
-## 1        Hurley
-## 2      Franklin
-## 3     Secretary
-## 4              
-## 5 Center Valley
-## 6
+##                             1                         
+## MINE_ID                     "4405782"                 
+## CURRENT_MINE_NAME           "Mine No 2"               
+## COAL_METAL_IND              "C"                       
+## CURRENT_MINE_TYPE           "Underground"             
+## CURRENT_MINE_STATUS         "Abandoned"               
+## CURRENT_STATUS_DT           "01/22/1982"              
+## CURRENT_CONTROLLER_ID       "C08906"                  
+## CURRENT_CONTROLLER_NAME     "Gibson James"            
+## CURRENT_OPERATOR_ID         "P11985"                  
+## CURRENT_OPERATOR_NAME       "Simplex Coal Corp"       
+## STATE                       "VA"                      
+## BOM_STATE_CD                "44"                      
+## FIPS_CNTY_CD                " 27"                     
+## FIPS_CNTY_NM                "Buchanan"                
+## CONG_DIST_CD                "9"                       
+## COMPANY_TYPE                "Corporation"             
+## CURRENT_CONTROLLER_BEGIN_DT "10/01/1981"              
+## DISTRICT                    "C05"                     
+## OFFICE_CD                   "C0502"                   
+## OFFICE_NAME                 "Vansant VA Field Office" 
+## ASSESS_CTRL_NO              ""                        
+## PRIMARY_SIC_CD              "122200"                  
+## PRIMARY_SIC                 "Coal (Bituminous)"       
+## PRIMARY_SIC_CD_1            "1222"                    
+## PRIMARY_SIC_CD_SFX          "0"                       
+## SECONDARY_SIC_CD            NA                        
+## SECONDARY_SIC               ""                        
+## SECONDARY_SIC_CD_1          NA                        
+## SECONDARY_SIC_CD_SFX        NA                        
+## PRIMARY_CANVASS_CD          "2"                       
+## PRIMARY_CANVASS             "Coal"                    
+## SECONDARY_CANVASS_CD        NA                        
+## SECONDARY_CANVASS           ""                        
+## CURRENT_103I                "Removed From 103I Status"
+## CURRENT_103I_DT             "10/01/1981"              
+## PORTABLE_OPERATION          "N"                       
+## PORTABLE_FIPS_ST_CD         NA                        
+## DAYS_PER_WEEK               "0"                       
+## HOURS_PER_SHIFT             NA                        
+## PROD_SHIFTS_PER_DAY         NA                        
+## MAINT_SHIFTS_PER_DAY        NA                        
+## NO_EMPLOYEES                "11"                      
+## PART48_TRAINING             "N"                       
+## LONGITUDE                   "82.06"                   
+## LATITUDE                    "37.42"                   
+## AVG_MINE_HEIGHT             "31"                      
+## MINE_GAS_CATEGORY_CD        ""                        
+## METHANE_LIBERATION          " 0"                      
+## NO_PRODUCING_PITS           NA                        
+## NO_NONPRODUCING_PITS        NA                        
+## NO_TAILING_PONDS            NA                        
+## PILLAR_RECOVERY_USED        "N"                       
+## HIGHWALL_MINER_USED         "N"                       
+## MULTIPLE_PITS               "N"                       
+## MINERS_REP_IND              "N"                       
+## SAFETY_COMMITTEE_IND        "N"                       
+## MILES_FROM_OFFICE           "  0"                     
+## DIRECTIONS_TO_MINE          ""                        
+## NEAREST_TOWN                "Hurley"                  
+##                             2                                 
+## MINE_ID                     "3605672"                         
+## CURRENT_MINE_NAME           "BURKHARDT OPERATION"             
+## COAL_METAL_IND              "M"                               
+## CURRENT_MINE_TYPE           "Surface"                         
+## CURRENT_MINE_STATUS         "Abandoned"                       
+## CURRENT_STATUS_DT           "07/10/2003"                      
+## CURRENT_CONTROLLER_ID       "M03183"                          
+## CURRENT_CONTROLLER_NAME     "Colas S A"                       
+## CURRENT_OPERATOR_ID         "L06066"                          
+## CURRENT_OPERATOR_NAME       "I A Construction Corp"           
+## STATE                       "PA"                              
+## BOM_STATE_CD                "36"                              
+## FIPS_CNTY_CD                "121"                             
+## FIPS_CNTY_NM                "Venango"                         
+## CONG_DIST_CD                "5"                               
+## COMPANY_TYPE                "Corporation"                     
+## CURRENT_CONTROLLER_BEGIN_DT "01/01/1950"                      
+## DISTRICT                    "M2"                              
+## OFFICE_CD                   "M2681"                           
+## OFFICE_NAME                 "Warrendale PA Field Office"      
+## ASSESS_CTRL_NO              "000006077"                       
+## PRIMARY_SIC_CD              "144200"                          
+## PRIMARY_SIC                 "Construction Sand and Gravel"    
+## PRIMARY_SIC_CD_1            "1442"                            
+## PRIMARY_SIC_CD_SFX          "0"                               
+## SECONDARY_SIC_CD            NA                                
+## SECONDARY_SIC               ""                                
+## SECONDARY_SIC_CD_1          NA                                
+## SECONDARY_SIC_CD_SFX        NA                                
+## PRIMARY_CANVASS_CD          "5"                               
+## PRIMARY_CANVASS             "SandAndGravel"                   
+## SECONDARY_CANVASS_CD        NA                                
+## SECONDARY_CANVASS           ""                                
+## CURRENT_103I                "Never Had 103I Status"           
+## CURRENT_103I_DT             ""                                
+## PORTABLE_OPERATION          "N"                               
+## PORTABLE_FIPS_ST_CD         NA                                
+## DAYS_PER_WEEK               "5"                               
+## HOURS_PER_SHIFT             " 8"                              
+## PROD_SHIFTS_PER_DAY         " 1"                              
+## MAINT_SHIFTS_PER_DAY        " 0"                              
+## NO_EMPLOYEES                " 0"                              
+## PART48_TRAINING             "Y"                               
+## LONGITUDE                   NA                                
+## LATITUDE                    NA                                
+## AVG_MINE_HEIGHT             NA                                
+## MINE_GAS_CATEGORY_CD        ""                                
+## METHANE_LIBERATION          NA                                
+## NO_PRODUCING_PITS           NA                                
+## NO_NONPRODUCING_PITS        NA                                
+## NO_TAILING_PONDS            " 0"                              
+## PILLAR_RECOVERY_USED        "N"                               
+## HIGHWALL_MINER_USED         "N"                               
+## MULTIPLE_PITS               "N"                               
+## MINERS_REP_IND              "N"                               
+## SAFETY_COMMITTEE_IND        "N"                               
+## MILES_FROM_OFFICE           " 70"                             
+## DIRECTIONS_TO_MINE          "Rt 322, 5 miles west of Franklin"
+## NEAREST_TOWN                "Franklin"                        
+##                             3                                                                                                   
+## MINE_ID                     "1800708"                                                                                           
+## CURRENT_MINE_NAME           "SHUFELT SAND & GRAVEL"                                                                             
+## COAL_METAL_IND              "M"                                                                                                 
+## CURRENT_MINE_TYPE           "Surface"                                                                                           
+## CURRENT_MINE_STATUS         "Active"                                                                                            
+## CURRENT_STATUS_DT           "11/08/2005"                                                                                        
+## CURRENT_CONTROLLER_ID       "M38422"                                                                                            
+## CURRENT_CONTROLLER_NAME     "Johnson  Shufelt"                                                                                  
+## CURRENT_OPERATOR_ID         "L38422"                                                                                            
+## CURRENT_OPERATOR_NAME       "Shufelt Sand & Gravel"                                                                             
+## STATE                       "MD"                                                                                                
+## BOM_STATE_CD                "18"                                                                                                
+## FIPS_CNTY_CD                " 19"                                                                                               
+## FIPS_CNTY_NM                "Dorchester"                                                                                        
+## CONG_DIST_CD                "1"                                                                                                 
+## COMPANY_TYPE                "Other"                                                                                             
+## CURRENT_CONTROLLER_BEGIN_DT "08/01/1984"                                                                                        
+## DISTRICT                    "M2"                                                                                                
+## OFFICE_CD                   "M2621"                                                                                             
+## OFFICE_NAME                 "Wyomissing PA Field Office"                                                                        
+## ASSESS_CTRL_NO              "000285008"                                                                                         
+## PRIMARY_SIC_CD              "144200"                                                                                            
+## PRIMARY_SIC                 "Construction Sand and Gravel"                                                                      
+## PRIMARY_SIC_CD_1            "1442"                                                                                              
+## PRIMARY_SIC_CD_SFX          "0"                                                                                                 
+## SECONDARY_SIC_CD            NA                                                                                                  
+## SECONDARY_SIC               ""                                                                                                  
+## SECONDARY_SIC_CD_1          NA                                                                                                  
+## SECONDARY_SIC_CD_SFX        NA                                                                                                  
+## PRIMARY_CANVASS_CD          "5"                                                                                                 
+## PRIMARY_CANVASS             "SandAndGravel"                                                                                     
+## SECONDARY_CANVASS_CD        NA                                                                                                  
+## SECONDARY_CANVASS           ""                                                                                                  
+## CURRENT_103I                "Never Had 103I Status"                                                                             
+## CURRENT_103I_DT             ""                                                                                                  
+## PORTABLE_OPERATION          "N"                                                                                                 
+## PORTABLE_FIPS_ST_CD         NA                                                                                                  
+## DAYS_PER_WEEK               "5"                                                                                                 
+## HOURS_PER_SHIFT             " 8"                                                                                                
+## PROD_SHIFTS_PER_DAY         " 1"                                                                                                
+## MAINT_SHIFTS_PER_DAY        " 0"                                                                                                
+## NO_EMPLOYEES                " 6"                                                                                                
+## PART48_TRAINING             "Y"                                                                                                 
+## LONGITUDE                   "76.64"                                                                                             
+## LATITUDE                    "39.05"                                                                                             
+## AVG_MINE_HEIGHT             NA                                                                                                  
+## MINE_GAS_CATEGORY_CD        ""                                                                                                  
+## METHANE_LIBERATION          NA                                                                                                  
+## NO_PRODUCING_PITS           NA                                                                                                  
+## NO_NONPRODUCING_PITS        NA                                                                                                  
+## NO_TAILING_PONDS            " 0"                                                                                                
+## PILLAR_RECOVERY_USED        "N"                                                                                                 
+## HIGHWALL_MINER_USED         "N"                                                                                                 
+## MULTIPLE_PITS               "N"                                                                                                 
+## MINERS_REP_IND              "N"                                                                                                 
+## SAFETY_COMMITTEE_IND        "N"                                                                                                 
+## MILES_FROM_OFFICE           "160"                                                                                               
+## DIRECTIONS_TO_MINE          "From Cambridge Route 50 East to Route 16 East, 4 miles.  Cemetary on right, mine entrance on left."
+## NEAREST_TOWN                "Secretary"
 ```
 
 ```r
@@ -207,120 +280,165 @@ mdat_wv <- subset(mdat, STATE == 'WV' & COAL_METAL_IND == 'C')
 
 
 ### Inspections
-To periodically rebuild this WV set of records, run `./munge/01-extract-wv.R`
+To periodically rebuild this WV set of records, run `./01-extract-wv.R`
 
 ```r
 idat <- read.csv("./data/wv_idat.csv")
 idat <- merge(idat, mdat_wv[, c("MINE_ID", "CURRENT_MINE_NAME", "CURRENT_CONTROLLER_NAME")])
-head(idat)
+t(head(idat, 3))
 ```
 
 ```
-##   MINE_ID     X CURRENT_MINE_TYPE EVENT_NO INSPECTION_BEGIN_DT
-## 1 4600309 46623       Underground  9839384          04/01/2005
-## 2 4600612    61       Underground  9843582          04/01/2005
-## 3 4601383  1074       Underground  9843879          04/01/2005
-## 4 4601399  1087       Underground  9843660          04/01/2005
-## 5 4601672 26504       Underground  9842118          04/01/2005
-## 6 4601728 49285       Underground  9842328          04/01/2005
-##   INSPECTION_END_DT CONTROLLER_ID           CONTROLLER_NAME OPERATOR_ID
-## 1                          C31626               Stanton H F      P31626
-## 2                          C00479              Valiunas J K      P00582
-## 3                          C00613 Occidental Petroleum Corp      P00737
-## 4                          C02197           Walker George F      P02552
-## 5                          C00481      Kennie Ray  Childers      P00583
-## 6                          C30229          Big Knob Coal Co      P30229
-##                  OPERATOR_NAME CAL_YR CAL_QTR FISCAL_YR FISCAL_QTR
-## 1      Old Gauley Coal Company     NA       4        NA          1
-## 2 Douglas Pocahontas Coal Corp     NA       4        NA          1
-## 3    Island Creek Coal Company     NA       4        NA          1
-## 4          Ashland Mining Corp     NA       4        NA          1
-## 5           K & H Coal Company     NA       4        NA          1
-## 6             Big Knob Coal Co     NA       4        NA          1
-##   INSPECT_OFFICE_CD ACTIVITY_CODE                            ACTIVITY
-## 1             C0400           T02 Office Generated Violation Activity
-## 2             C0400           T02 Office Generated Violation Activity
-## 3             C0400           T02 Office Generated Violation Activity
-## 4             C0400           T02 Office Generated Violation Activity
-## 5             C0400           T02 Office Generated Violation Activity
-## 6             C0400           T02 Office Generated Violation Activity
-##   ACTIVE_SECTIONS IDLE_SECTIONS SHAFT_SLOPE_SINK IMPOUND_CONSTR
-## 1               0             0                0              0
-## 2               0             0                0              0
-## 3               0             0                0              0
-## 4               0             0                0              0
-## 5               0             0                0              0
-## 6               0             0                0              0
-##   BLDG_CONSTR_SITES DRAGLINES UNCLASSIFIED_CONSTR CO_RECORDS SURF_UG_MINE
-## 1                 0         0                   0          N            N
-## 2                 0         0                   0          N            N
-## 3                 0         0                   0          N            N
-## 4                 0         0                   0          N            N
-## 5                 0         0                   0          N            N
-## 6                 0         0                   0          N            N
-##   SURF_FACILITY_MINE REFUSE_PILES EXPLOSIVE_STORAGE OUTBY_AREAS
-## 1                  N            N                 N           N
-## 2                  N            N                 N           N
-## 3                  N            N                 N           N
-## 4                  N            N                 N           N
-## 5                  N            N                 N           N
-## 6                  N            N                 N           N
-##   MAJOR_CONSTR SHAFTS_SLOPES IMPOUNDMENTS MISC_AREA
-## 1            N             N            N         N
-## 2            N             N            N         N
-## 3            N             N            N         N
-## 4            N             N            N         N
-## 5            N             N            N         N
-## 6            N             N            N         N
-##                                PROGRAM_AREA SUM.SAMPLE_CNT_AIR.
-## 1 Coal--Office Generated Violation Activity                   0
-## 2 Coal--Office Generated Violation Activity                   0
-## 3 Coal--Office Generated Violation Activity                   0
-## 4 Coal--Office Generated Violation Activity                   0
-## 5 Coal--Office Generated Violation Activity                   0
-## 6 Coal--Office Generated Violation Activity                   0
-##   SUM.SAMPLE_CNT_DUSTSPOT. SUM.SAMPLE_CNT_DUSTSURVEY.
-## 1                        0                          0
-## 2                        0                          0
-## 3                        0                          0
-## 4                        0                          0
-## 5                        0                          0
-## 6                        0                          0
-##   SUM.SAMPLE_CNT_RESPDUST. SUM.SAMPLE_CNT_NOISE. SUM.SAMPLE_CNT_OTHER.
-## 1                        0                     0                     0
-## 2                        0                     0                     0
-## 3                        0                     0                     0
-## 4                        0                     0                     0
-## 5                        0                     0                     0
-## 6                        0                     0                     0
-##   NBR_INSPECTOR SUM.TOTAL_INSP_HOURS. SUM.TOTAL_ON_SITE_HOURS.
-## 1             0                     0                        0
-## 2             0                     0                        0
-## 3             0                     0                        0
-## 4             0                     0                        0
-## 5             0                     0                        0
-## 6             0                     0                        0
-##   COAL_METAL_IND SUM.TOTAL_INSP_HRS_SPVR_TRAINEE.
-## 1              C                               NA
-## 2              C                               NA
-## 3              C                               NA
-## 4              C                               NA
-## 5              C                               NA
-## 6              C                               NA
-##   SUM.TOTAL_ON_SITE_HRS_SPVR_TRAINEE.     CURRENT_MINE_NAME
-## 1                                  NA     Lick Fork No 1 Ug
-## 2                                  NA             No 8-Mine
-## 3                                  NA       Guyan No 1 Mine
-## 4                                  NA Ashland Mine No 11 Ug
-## 5                                  NA       K & H Mine No 3
-## 6                                  NA             No 2 Mine
-##     CURRENT_CONTROLLER_NAME
-## 1               Stanton H F
-## 2              Valiunas J K
-## 3 Occidental Petroleum Corp
-## 4           Walker George F
-## 5      Kennie Ray  Childers
-## 6          Big Knob Coal Co
+##                                     1                                          
+## MINE_ID                             "4600309"                                  
+## X                                   "46623"                                    
+## CURRENT_MINE_TYPE                   "Underground"                              
+## EVENT_NO                            "9839384"                                  
+## INSPECTION_BEGIN_DT                 "04/01/2005"                               
+## INSPECTION_END_DT                   ""                                         
+## CONTROLLER_ID                       "C31626"                                   
+## CONTROLLER_NAME                     "Stanton H F"                              
+## OPERATOR_ID                         "P31626"                                   
+## OPERATOR_NAME                       "Old Gauley Coal Company"                  
+## CAL_YR                              NA                                         
+## CAL_QTR                             "4"                                        
+## FISCAL_YR                           NA                                         
+## FISCAL_QTR                          "1"                                        
+## INSPECT_OFFICE_CD                   "C0400"                                    
+## ACTIVITY_CODE                       "T02"                                      
+## ACTIVITY                            "Office Generated Violation Activity"      
+## ACTIVE_SECTIONS                     "0"                                        
+## IDLE_SECTIONS                       "0"                                        
+## SHAFT_SLOPE_SINK                    "0"                                        
+## IMPOUND_CONSTR                      "0"                                        
+## BLDG_CONSTR_SITES                   "0"                                        
+## DRAGLINES                           "0"                                        
+## UNCLASSIFIED_CONSTR                 "0"                                        
+## CO_RECORDS                          "N"                                        
+## SURF_UG_MINE                        "N"                                        
+## SURF_FACILITY_MINE                  "N"                                        
+## REFUSE_PILES                        "N"                                        
+## EXPLOSIVE_STORAGE                   "N"                                        
+## OUTBY_AREAS                         "N"                                        
+## MAJOR_CONSTR                        "N"                                        
+## SHAFTS_SLOPES                       "N"                                        
+## IMPOUNDMENTS                        "N"                                        
+## MISC_AREA                           "N"                                        
+## PROGRAM_AREA                        "Coal--Office Generated Violation Activity"
+## SUM.SAMPLE_CNT_AIR.                 "0"                                        
+## SUM.SAMPLE_CNT_DUSTSPOT.            "0"                                        
+## SUM.SAMPLE_CNT_DUSTSURVEY.          "0"                                        
+## SUM.SAMPLE_CNT_RESPDUST.            "0"                                        
+## SUM.SAMPLE_CNT_NOISE.               "0"                                        
+## SUM.SAMPLE_CNT_OTHER.               "0"                                        
+## NBR_INSPECTOR                       "0"                                        
+## SUM.TOTAL_INSP_HOURS.               "0"                                        
+## SUM.TOTAL_ON_SITE_HOURS.            "0"                                        
+## COAL_METAL_IND                      "C"                                        
+## SUM.TOTAL_INSP_HRS_SPVR_TRAINEE.    NA                                         
+## SUM.TOTAL_ON_SITE_HRS_SPVR_TRAINEE. NA                                         
+## CURRENT_MINE_NAME                   "Lick Fork No 1 Ug"                        
+## CURRENT_CONTROLLER_NAME             "Stanton H F"                              
+##                                     2                                          
+## MINE_ID                             "4600612"                                  
+## X                                   "   61"                                    
+## CURRENT_MINE_TYPE                   "Underground"                              
+## EVENT_NO                            "9843582"                                  
+## INSPECTION_BEGIN_DT                 "04/01/2005"                               
+## INSPECTION_END_DT                   ""                                         
+## CONTROLLER_ID                       "C00479"                                   
+## CONTROLLER_NAME                     "Valiunas J K"                             
+## OPERATOR_ID                         "P00582"                                   
+## OPERATOR_NAME                       "Douglas Pocahontas Coal Corp"             
+## CAL_YR                              NA                                         
+## CAL_QTR                             "4"                                        
+## FISCAL_YR                           NA                                         
+## FISCAL_QTR                          "1"                                        
+## INSPECT_OFFICE_CD                   "C0400"                                    
+## ACTIVITY_CODE                       "T02"                                      
+## ACTIVITY                            "Office Generated Violation Activity"      
+## ACTIVE_SECTIONS                     "0"                                        
+## IDLE_SECTIONS                       "0"                                        
+## SHAFT_SLOPE_SINK                    "0"                                        
+## IMPOUND_CONSTR                      "0"                                        
+## BLDG_CONSTR_SITES                   "0"                                        
+## DRAGLINES                           "0"                                        
+## UNCLASSIFIED_CONSTR                 "0"                                        
+## CO_RECORDS                          "N"                                        
+## SURF_UG_MINE                        "N"                                        
+## SURF_FACILITY_MINE                  "N"                                        
+## REFUSE_PILES                        "N"                                        
+## EXPLOSIVE_STORAGE                   "N"                                        
+## OUTBY_AREAS                         "N"                                        
+## MAJOR_CONSTR                        "N"                                        
+## SHAFTS_SLOPES                       "N"                                        
+## IMPOUNDMENTS                        "N"                                        
+## MISC_AREA                           "N"                                        
+## PROGRAM_AREA                        "Coal--Office Generated Violation Activity"
+## SUM.SAMPLE_CNT_AIR.                 "0"                                        
+## SUM.SAMPLE_CNT_DUSTSPOT.            "0"                                        
+## SUM.SAMPLE_CNT_DUSTSURVEY.          "0"                                        
+## SUM.SAMPLE_CNT_RESPDUST.            "0"                                        
+## SUM.SAMPLE_CNT_NOISE.               "0"                                        
+## SUM.SAMPLE_CNT_OTHER.               "0"                                        
+## NBR_INSPECTOR                       "0"                                        
+## SUM.TOTAL_INSP_HOURS.               "0"                                        
+## SUM.TOTAL_ON_SITE_HOURS.            "0"                                        
+## COAL_METAL_IND                      "C"                                        
+## SUM.TOTAL_INSP_HRS_SPVR_TRAINEE.    NA                                         
+## SUM.TOTAL_ON_SITE_HRS_SPVR_TRAINEE. NA                                         
+## CURRENT_MINE_NAME                   "No 8-Mine"                                
+## CURRENT_CONTROLLER_NAME             "Valiunas J K"                             
+##                                     3                                          
+## MINE_ID                             "4601383"                                  
+## X                                   " 1074"                                    
+## CURRENT_MINE_TYPE                   "Underground"                              
+## EVENT_NO                            "9843879"                                  
+## INSPECTION_BEGIN_DT                 "04/01/2005"                               
+## INSPECTION_END_DT                   ""                                         
+## CONTROLLER_ID                       "C00613"                                   
+## CONTROLLER_NAME                     "Occidental Petroleum Corp"                
+## OPERATOR_ID                         "P00737"                                   
+## OPERATOR_NAME                       "Island Creek Coal Company"                
+## CAL_YR                              NA                                         
+## CAL_QTR                             "4"                                        
+## FISCAL_YR                           NA                                         
+## FISCAL_QTR                          "1"                                        
+## INSPECT_OFFICE_CD                   "C0400"                                    
+## ACTIVITY_CODE                       "T02"                                      
+## ACTIVITY                            "Office Generated Violation Activity"      
+## ACTIVE_SECTIONS                     "0"                                        
+## IDLE_SECTIONS                       "0"                                        
+## SHAFT_SLOPE_SINK                    "0"                                        
+## IMPOUND_CONSTR                      "0"                                        
+## BLDG_CONSTR_SITES                   "0"                                        
+## DRAGLINES                           "0"                                        
+## UNCLASSIFIED_CONSTR                 "0"                                        
+## CO_RECORDS                          "N"                                        
+## SURF_UG_MINE                        "N"                                        
+## SURF_FACILITY_MINE                  "N"                                        
+## REFUSE_PILES                        "N"                                        
+## EXPLOSIVE_STORAGE                   "N"                                        
+## OUTBY_AREAS                         "N"                                        
+## MAJOR_CONSTR                        "N"                                        
+## SHAFTS_SLOPES                       "N"                                        
+## IMPOUNDMENTS                        "N"                                        
+## MISC_AREA                           "N"                                        
+## PROGRAM_AREA                        "Coal--Office Generated Violation Activity"
+## SUM.SAMPLE_CNT_AIR.                 "0"                                        
+## SUM.SAMPLE_CNT_DUSTSPOT.            "0"                                        
+## SUM.SAMPLE_CNT_DUSTSURVEY.          "0"                                        
+## SUM.SAMPLE_CNT_RESPDUST.            "0"                                        
+## SUM.SAMPLE_CNT_NOISE.               "0"                                        
+## SUM.SAMPLE_CNT_OTHER.               "0"                                        
+## NBR_INSPECTOR                       "0"                                        
+## SUM.TOTAL_INSP_HOURS.               "0"                                        
+## SUM.TOTAL_ON_SITE_HOURS.            "0"                                        
+## COAL_METAL_IND                      "C"                                        
+## SUM.TOTAL_INSP_HRS_SPVR_TRAINEE.    NA                                         
+## SUM.TOTAL_ON_SITE_HRS_SPVR_TRAINEE. NA                                         
+## CURRENT_MINE_NAME                   "Guyan No 1 Mine"                          
+## CURRENT_CONTROLLER_NAME             "Occidental Petroleum Corp"
 ```
 
 
@@ -332,136 +450,193 @@ adat <- read.table('./data/msha_source/Accidents.TXT', header=T, sep="|", fill=T
 adat <- subset(adat, FIPS_STATE_CD==54)
 adat <- merge(adat, mdat_wv[,c('MINE_ID','CURRENT_MINE_NAME','CURRENT_CONTROLLER_NAME')])
 adat$accident.key <- seq(1:nrow(adat))
-head(adat)
+t(head(adat,3))
 ```
 
 ```
-##   MINE_ID CONTROLLER_ID   CONTROLLER_NAME OPERATOR_ID        OPERATOR_NAME
-## 1 4608870        C15194 Douglas M  Epling      P24500 Legacy Resources LLC
-## 2 4608870        C15194 Douglas M  Epling      P24500 Legacy Resources LLC
-## 3 4608870        C15194 Douglas M  Epling      P24500 Legacy Resources LLC
-## 4 4608870        C15194 Douglas M  Epling      P24500 Legacy Resources LLC
-## 5 4608870        C15194 Douglas M  Epling      P24500 Legacy Resources LLC
-## 6 4608870        C15194 Douglas M  Epling      P24500 Legacy Resources LLC
-##   CONTRACTOR_ID DOCUMENT_NO SUBUNIT_CD                SUBUNIT ACCIDENT_DT
-## 1          E879   2.201e+11          3 STRIP, QUARY, OPEN PIT  05/06/2009
-## 2                 2.200e+11          3 STRIP, QUARY, OPEN PIT  04/24/2003
-## 3                 2.201e+11          3 STRIP, QUARY, OPEN PIT  01/17/2009
-## 4           CM9   2.201e+11          3 STRIP, QUARY, OPEN PIT  08/13/2008
-## 5                 2.201e+11          3 STRIP, QUARY, OPEN PIT  05/18/2011
-## 6                 2.200e+11          3 STRIP, QUARY, OPEN PIT  03/25/2004
-##   CAL_YR CAL_QTR FISCAL_YR FISCAL_QTR ACCIDENT_TIME DEGREE_INJURY_CD
-## 1   2009       2      2009          3          1045                3
-## 2   2003       2      2003          3          1700                3
-## 3   2009       1      2009          2           400                6
-## 4   2008       3      2008          4          1600                4
-## 5   2011       2      2011          3          1030                3
-## 6   2004       1      2004          2            15                3
-##                    DEGREE_INJURY FIPS_STATE_CD UG_LOCATION_CD
-## 1       DAYS AWAY FROM WORK ONLY            54             ? 
-## 2       DAYS AWAY FROM WORK ONLY            54             ? 
-## 3 NO DYS AWY FRM WRK,NO RSTR ACT            54             ? 
-## 4 DYS AWY FRM WRK & RESTRCTD ACT            54             ? 
-## 5       DAYS AWAY FROM WORK ONLY            54             ? 
-## 6       DAYS AWAY FROM WORK ONLY            54             ? 
-##      UG_LOCATION UG_MINING_METHOD_CD UG_MINING_METHOD MINING_EQUIP_CD
-## 1 NO VALUE FOUND                  ?    NO VALUE FOUND          ?     
-## 2 NO VALUE FOUND                  ?    NO VALUE FOUND          ?     
-## 3 NO VALUE FOUND                  ?    NO VALUE FOUND          710000
-## 4 NO VALUE FOUND                  ?    NO VALUE FOUND          740100
-## 5 NO VALUE FOUND                  ?    NO VALUE FOUND          740100
-## 6 NO VALUE FOUND                  ?    NO VALUE FOUND          210300
-##                            MINING_EQUIP EQUIP_MFR_CD     EQUIP_MFR_NAME
-## 1                        NO VALUE FOUND         ?        NO VALUE FOUND
-## 2                        NO VALUE FOUND         ?        NO VALUE FOUND
-## 3 Tractor (with or without attachments)         0000       Not Reported
-## 4   Dumper, off-highway and underground         0310        Caterpillar
-## 5   Dumper, off-highway and underground         0000       Not Reported
-## 6                 Machine-mounted drill         0904 Ingersoll-Rand Co.
-##   EQUIP_MODEL_NO SHIFT_BEGIN_TIME CLASSIFICATION_CD
-## 1              ?              600                18
-## 2              ?              700                 9
-## 3              ?              300                19
-## 4           785C              630                18
-## 5              ?              600                12
-## 6              ?             1530                18
-##                   CLASSIFICATION ACCIDENT_TYPE_CD
-## 1         SLIP OR FALL OF PERSON               16
-## 2          HANDLING OF MATERIALS               27
-## 3 STEPPING OR KNEELING ON OBJECT                1
-## 4         SLIP OR FALL OF PERSON               14
-## 5                POWERED HAULAGE                2
-## 6         SLIP OR FALL OF PERSON               12
-##                   ACCIDENT_TYPE NO_INJURIES TOT_EXPER MINE_EXPER JOB_EXPER
-## 1      FALL TO LOWER LEVEL, NEC           1       8.0       2.23      18.0
-## 2 OVER-EXERTION IN LIFTING OBJS           1        NA       0.17        NA
-## 3 STRUCK AGAINST STATIONARY OBJ           1       4.5       4.50       4.5
-## 4             FALL FROM LADDERS           1        NA         NA      29.0
-## 5  STRUCK AGAINST MOVING OBJECT           1       7.0       4.00       7.0
-## 6 FALL FRM MACH, VEHICLE, EQUIP           1        NA       2.21        NA
-##   OCCUPATION_CD                 OCCUPATION ACTIVITY_CD
-## 1           168 Bulldozer/tractor operator         027
-## 2           121                     Welder         028
-## 3           168 Bulldozer/tractor operator         023
-## 4           104  Mechanic/repairman/helper         039
-## 5           176               Truck driver         055
-## 6           133  Drill helper/chuck tender         023
-##                        ACTIVITY INJURY_SOURCE_CD             INJURY_SOURCE
-## 1           HANDLING EXPLOSIVES              117                    GROUND
-## 2   HANDLING SUPPLIES/MATERIALS              088 METAL,NEC(PIPE,WIRE,NAIL)
-## 3 GET ON/OFF EQUIPMENT/MACHINES              089 BROKEN ROCK,COAL,ORE,WSTE
-## 4    MACHINE MAINTENANCE/REPAIR              117                    GROUND
-## 5         OPERATE HAULAGE TRUCK              089 BROKEN ROCK,COAL,ORE,WSTE
-## 6 GET ON/OFF EQUIPMENT/MACHINES              117                    GROUND
-##   NATURE_INJURY_CD             NATURE_INJURY INJ_BODY_PART_CD
-## 1              400 UNCLASSIFIED,NOT DETERMED              512
-## 2              330   SPRAIN,STRAIN RUPT DISC              420
-## 3              220             FRACTURE,CHIP              520
-## 4              160 CONTUSN,BRUISE,INTAC SKIN              460
-## 5              330   SPRAIN,STRAIN RUPT DISC              420
-## 6              330   SPRAIN,STRAIN RUPT DISC              420
-##                          INJ_BODY_PART SCHEDULE_CHARGE DAYS_RESTRICT
-## 1                         KNEE/PATELLA              NA            NA
-## 2 BACK (MUSCLES/SPINE/S-CORD/TAILBONE)              NA            NA
-## 3                                ANKLE              NA            NA
-## 4                TRUNK, MULTIPLE PARTS              NA           117
-## 5 BACK (MUSCLES/SPINE/S-CORD/TAILBONE)              NA            NA
-## 6 BACK (MUSCLES/SPINE/S-CORD/TAILBONE)              NA            NA
-##   DAYS_LOST TRANS_TERM RETURN_TO_WORK_DT IMMED_NOTIFY_CD IMMED_NOTIFY
-## 1        90          N        09/15/2009              13   NOT MARKED
-## 2         3          N        04/30/2003              13   NOT MARKED
-## 3        NA          N        01/19/2009              13   NOT MARKED
-## 4        90          N        03/11/2009              13   NOT MARKED
-## 5        12          N        06/03/2011              13   NOT MARKED
-## 6       308          N        05/01/2005              13   NOT MARKED
-##   INVEST_BEGIN_DT
-## 1                
-## 2      04/28/2003
-## 3                
-## 4                
-## 5                
-## 6                
-##                                                                                                                                                                                 NARRATIVE
-## 1                                                                          Employee was laying out shot pattern on drill bench. Mine break opened up under feet and the employee fell in.
-## 2                                                                                                                           LIFTING CUTTING EDGE FROM D-10 TRACTOR WHILE UNLOADING TRUCK.
-## 3                                                   Employee was starting equipment for the beginning of the shift. He climbed down off a dozer, stepped on a rock and twisted his ankle.
-## 4 Working on ladder while removing bed pins on 785C. While working with pry bar, lost balance and fell to ground. Working 6-8 feet off ground. Working on restricted duty - no time lost.
-## 5              Employee was being loaded in the pit by the end loader when a rock that was getting loaded onto his truck slipped across the load and hit the other side of the truck bed.
-## 6                                                                                              DRILL STEEL GOT BROKEN DURING EE'S SHIFT. WHEN EE STEPPED OUT OF DRILL, HE SLIPPED & FELL.
-##   CLOSED_DOC_NO COAL_METAL_IND         CURRENT_MINE_NAME
-## 1     3.201e+11              C Synergy Surface Mine No 1
-## 2     3.200e+11              C Synergy Surface Mine No 1
-## 3            NA              C Synergy Surface Mine No 1
-## 4     3.201e+11              C Synergy Surface Mine No 1
-## 5     3.201e+11              C Synergy Surface Mine No 1
-## 6            NA              C Synergy Surface Mine No 1
-##   CURRENT_CONTROLLER_NAME accident.key
-## 1       Douglas M  Epling            1
-## 2       Douglas M  Epling            2
-## 3       Douglas M  Epling            3
-## 4       Douglas M  Epling            4
-## 5       Douglas M  Epling            5
-## 6       Douglas M  Epling            6
+##                         1                                                                                                               
+## MINE_ID                 "4608870"                                                                                                       
+## CONTROLLER_ID           "C15194"                                                                                                        
+## CONTROLLER_NAME         "Douglas M  Epling"                                                                                             
+## OPERATOR_ID             "P24500"                                                                                                        
+## OPERATOR_NAME           "Legacy Resources LLC"                                                                                          
+## CONTRACTOR_ID           "E879"                                                                                                          
+## DOCUMENT_NO             "2.201e+11"                                                                                                     
+## SUBUNIT_CD              "3"                                                                                                             
+## SUBUNIT                 "STRIP, QUARY, OPEN PIT"                                                                                        
+## ACCIDENT_DT             "05/06/2009"                                                                                                    
+## CAL_YR                  "2009"                                                                                                          
+## CAL_QTR                 "2"                                                                                                             
+## FISCAL_YR               "2009"                                                                                                          
+## FISCAL_QTR              "3"                                                                                                             
+## ACCIDENT_TIME           "1045"                                                                                                          
+## DEGREE_INJURY_CD        "3"                                                                                                             
+## DEGREE_INJURY           "DAYS AWAY FROM WORK ONLY"                                                                                      
+## FIPS_STATE_CD           "54"                                                                                                            
+## UG_LOCATION_CD          "? "                                                                                                            
+## UG_LOCATION             "NO VALUE FOUND"                                                                                                
+## UG_MINING_METHOD_CD     "? "                                                                                                            
+## UG_MINING_METHOD        "NO VALUE FOUND"                                                                                                
+## MINING_EQUIP_CD         "?     "                                                                                                        
+## MINING_EQUIP            "NO VALUE FOUND"                                                                                                
+## EQUIP_MFR_CD            "?   "                                                                                                          
+## EQUIP_MFR_NAME          "NO VALUE FOUND"                                                                                                
+## EQUIP_MODEL_NO          "?"                                                                                                             
+## SHIFT_BEGIN_TIME        "600"                                                                                                           
+## CLASSIFICATION_CD       "18"                                                                                                            
+## CLASSIFICATION          "SLIP OR FALL OF PERSON"                                                                                        
+## ACCIDENT_TYPE_CD        "16"                                                                                                            
+## ACCIDENT_TYPE           "FALL TO LOWER LEVEL, NEC"                                                                                      
+## NO_INJURIES             "1"                                                                                                             
+## TOT_EXPER               "8.0"                                                                                                           
+## MINE_EXPER              "2.23"                                                                                                          
+## JOB_EXPER               "18.0"                                                                                                          
+## OCCUPATION_CD           "168"                                                                                                           
+## OCCUPATION              "Bulldozer/tractor operator"                                                                                    
+## ACTIVITY_CD             "027"                                                                                                           
+## ACTIVITY                "HANDLING EXPLOSIVES"                                                                                           
+## INJURY_SOURCE_CD        "117"                                                                                                           
+## INJURY_SOURCE           "GROUND"                                                                                                        
+## NATURE_INJURY_CD        "400"                                                                                                           
+## NATURE_INJURY           "UNCLASSIFIED,NOT DETERMED"                                                                                     
+## INJ_BODY_PART_CD        "512"                                                                                                           
+## INJ_BODY_PART           "KNEE/PATELLA"                                                                                                  
+## SCHEDULE_CHARGE         NA                                                                                                              
+## DAYS_RESTRICT           NA                                                                                                              
+## DAYS_LOST               "90"                                                                                                            
+## TRANS_TERM              "N"                                                                                                             
+## RETURN_TO_WORK_DT       "09/15/2009"                                                                                                    
+## IMMED_NOTIFY_CD         "13"                                                                                                            
+## IMMED_NOTIFY            "NOT MARKED"                                                                                                    
+## INVEST_BEGIN_DT         ""                                                                                                              
+## NARRATIVE               "Employee was laying out shot pattern on drill bench. Mine break opened up under feet and the employee fell in."
+## CLOSED_DOC_NO           "3.201e+11"                                                                                                     
+## COAL_METAL_IND          "C"                                                                                                             
+## CURRENT_MINE_NAME       "Synergy Surface Mine No 1"                                                                                     
+## CURRENT_CONTROLLER_NAME "Douglas M  Epling"                                                                                             
+## accident.key            "1"                                                                                                             
+##                         2                                                              
+## MINE_ID                 "4608870"                                                      
+## CONTROLLER_ID           "C15194"                                                       
+## CONTROLLER_NAME         "Douglas M  Epling"                                            
+## OPERATOR_ID             "P24500"                                                       
+## OPERATOR_NAME           "Legacy Resources LLC"                                         
+## CONTRACTOR_ID           ""                                                             
+## DOCUMENT_NO             "2.200e+11"                                                    
+## SUBUNIT_CD              "3"                                                            
+## SUBUNIT                 "STRIP, QUARY, OPEN PIT"                                       
+## ACCIDENT_DT             "04/24/2003"                                                   
+## CAL_YR                  "2003"                                                         
+## CAL_QTR                 "2"                                                            
+## FISCAL_YR               "2003"                                                         
+## FISCAL_QTR              "3"                                                            
+## ACCIDENT_TIME           "1700"                                                         
+## DEGREE_INJURY_CD        "3"                                                            
+## DEGREE_INJURY           "DAYS AWAY FROM WORK ONLY"                                     
+## FIPS_STATE_CD           "54"                                                           
+## UG_LOCATION_CD          "? "                                                           
+## UG_LOCATION             "NO VALUE FOUND"                                               
+## UG_MINING_METHOD_CD     "? "                                                           
+## UG_MINING_METHOD        "NO VALUE FOUND"                                               
+## MINING_EQUIP_CD         "?     "                                                       
+## MINING_EQUIP            "NO VALUE FOUND"                                               
+## EQUIP_MFR_CD            "?   "                                                         
+## EQUIP_MFR_NAME          "NO VALUE FOUND"                                               
+## EQUIP_MODEL_NO          "?"                                                            
+## SHIFT_BEGIN_TIME        "700"                                                          
+## CLASSIFICATION_CD       " 9"                                                           
+## CLASSIFICATION          "HANDLING OF MATERIALS"                                        
+## ACCIDENT_TYPE_CD        "27"                                                           
+## ACCIDENT_TYPE           "OVER-EXERTION IN LIFTING OBJS"                                
+## NO_INJURIES             "1"                                                            
+## TOT_EXPER               NA                                                             
+## MINE_EXPER              "0.17"                                                         
+## JOB_EXPER               NA                                                             
+## OCCUPATION_CD           "121"                                                          
+## OCCUPATION              "Welder"                                                       
+## ACTIVITY_CD             "028"                                                          
+## ACTIVITY                "HANDLING SUPPLIES/MATERIALS"                                  
+## INJURY_SOURCE_CD        "088"                                                          
+## INJURY_SOURCE           "METAL,NEC(PIPE,WIRE,NAIL)"                                    
+## NATURE_INJURY_CD        "330"                                                          
+## NATURE_INJURY           "SPRAIN,STRAIN RUPT DISC"                                      
+## INJ_BODY_PART_CD        "420"                                                          
+## INJ_BODY_PART           "BACK (MUSCLES/SPINE/S-CORD/TAILBONE)"                         
+## SCHEDULE_CHARGE         NA                                                             
+## DAYS_RESTRICT           NA                                                             
+## DAYS_LOST               " 3"                                                           
+## TRANS_TERM              "N"                                                            
+## RETURN_TO_WORK_DT       "04/30/2003"                                                   
+## IMMED_NOTIFY_CD         "13"                                                           
+## IMMED_NOTIFY            "NOT MARKED"                                                   
+## INVEST_BEGIN_DT         "04/28/2003"                                                   
+## NARRATIVE               "LIFTING CUTTING EDGE FROM D-10 TRACTOR WHILE UNLOADING TRUCK."
+## CLOSED_DOC_NO           "3.200e+11"                                                    
+## COAL_METAL_IND          "C"                                                            
+## CURRENT_MINE_NAME       "Synergy Surface Mine No 1"                                    
+## CURRENT_CONTROLLER_NAME "Douglas M  Epling"                                            
+## accident.key            "2"                                                            
+##                         3                                                                                                                                      
+## MINE_ID                 "4608870"                                                                                                                              
+## CONTROLLER_ID           "C15194"                                                                                                                               
+## CONTROLLER_NAME         "Douglas M  Epling"                                                                                                                    
+## OPERATOR_ID             "P24500"                                                                                                                               
+## OPERATOR_NAME           "Legacy Resources LLC"                                                                                                                 
+## CONTRACTOR_ID           ""                                                                                                                                     
+## DOCUMENT_NO             "2.201e+11"                                                                                                                            
+## SUBUNIT_CD              "3"                                                                                                                                    
+## SUBUNIT                 "STRIP, QUARY, OPEN PIT"                                                                                                               
+## ACCIDENT_DT             "01/17/2009"                                                                                                                           
+## CAL_YR                  "2009"                                                                                                                                 
+## CAL_QTR                 "1"                                                                                                                                    
+## FISCAL_YR               "2009"                                                                                                                                 
+## FISCAL_QTR              "2"                                                                                                                                    
+## ACCIDENT_TIME           " 400"                                                                                                                                 
+## DEGREE_INJURY_CD        "6"                                                                                                                                    
+## DEGREE_INJURY           "NO DYS AWY FRM WRK,NO RSTR ACT"                                                                                                       
+## FIPS_STATE_CD           "54"                                                                                                                                   
+## UG_LOCATION_CD          "? "                                                                                                                                   
+## UG_LOCATION             "NO VALUE FOUND"                                                                                                                       
+## UG_MINING_METHOD_CD     "? "                                                                                                                                   
+## UG_MINING_METHOD        "NO VALUE FOUND"                                                                                                                       
+## MINING_EQUIP_CD         "710000"                                                                                                                               
+## MINING_EQUIP            "Tractor (with or without attachments)"                                                                                                
+## EQUIP_MFR_CD            "0000"                                                                                                                                 
+## EQUIP_MFR_NAME          "Not Reported"                                                                                                                         
+## EQUIP_MODEL_NO          "?"                                                                                                                                    
+## SHIFT_BEGIN_TIME        "300"                                                                                                                                  
+## CLASSIFICATION_CD       "19"                                                                                                                                   
+## CLASSIFICATION          "STEPPING OR KNEELING ON OBJECT"                                                                                                       
+## ACCIDENT_TYPE_CD        " 1"                                                                                                                                   
+## ACCIDENT_TYPE           "STRUCK AGAINST STATIONARY OBJ"                                                                                                        
+## NO_INJURIES             "1"                                                                                                                                    
+## TOT_EXPER               "4.5"                                                                                                                                  
+## MINE_EXPER              "4.50"                                                                                                                                 
+## JOB_EXPER               " 4.5"                                                                                                                                 
+## OCCUPATION_CD           "168"                                                                                                                                  
+## OCCUPATION              "Bulldozer/tractor operator"                                                                                                           
+## ACTIVITY_CD             "023"                                                                                                                                  
+## ACTIVITY                "GET ON/OFF EQUIPMENT/MACHINES"                                                                                                        
+## INJURY_SOURCE_CD        "089"                                                                                                                                  
+## INJURY_SOURCE           "BROKEN ROCK,COAL,ORE,WSTE"                                                                                                            
+## NATURE_INJURY_CD        "220"                                                                                                                                  
+## NATURE_INJURY           "FRACTURE,CHIP"                                                                                                                        
+## INJ_BODY_PART_CD        "520"                                                                                                                                  
+## INJ_BODY_PART           "ANKLE"                                                                                                                                
+## SCHEDULE_CHARGE         NA                                                                                                                                     
+## DAYS_RESTRICT           NA                                                                                                                                     
+## DAYS_LOST               NA                                                                                                                                     
+## TRANS_TERM              "N"                                                                                                                                    
+## RETURN_TO_WORK_DT       "01/19/2009"                                                                                                                           
+## IMMED_NOTIFY_CD         "13"                                                                                                                                   
+## IMMED_NOTIFY            "NOT MARKED"                                                                                                                           
+## INVEST_BEGIN_DT         ""                                                                                                                                     
+## NARRATIVE               "Employee was starting equipment for the beginning of the shift. He climbed down off a dozer, stepped on a rock and twisted his ankle."
+## CLOSED_DOC_NO           NA                                                                                                                                     
+## COAL_METAL_IND          "C"                                                                                                                                    
+## CURRENT_MINE_NAME       "Synergy Surface Mine No 1"                                                                                                            
+## CURRENT_CONTROLLER_NAME "Douglas M  Epling"                                                                                                                    
+## accident.key            "3"
 ```
 
 
@@ -471,122 +646,208 @@ head(adat)
 ```r
 vdat <- read.csv("./data/wv_vdat.csv")
 vdat <- merge(vdat, mdat_wv[, c("MINE_ID", "CURRENT_MINE_NAME", "CURRENT_CONTROLLER_NAME")])
-head(vdat)
+t(head(vdat, 3))
 ```
 
 ```
-##   MINE_ID     X CURRENT_MINE_TYPE EVENT_NO INSPECTION_BEGIN_DT
-## 1 4608870 29413           Surface  4111925          04/11/2006
-## 2 4608870 29414           Surface  4098645          04/01/2003
-## 3 4608870 29417           Surface  4103570          10/01/2003
-## 4 4608870 29418           Surface  4111925          04/11/2006
-## 5 4608870 29415           Surface  4111925          04/11/2006
-## 6 4608870 29412           Surface  4111925          04/11/2006
-##   INSPECTION_END_DT VIOLATION_NO CONTROLLER_ID   CONTROLLER_NAME
-## 1        06/13/2006      7244272                                
-## 2        06/20/2003      4191617                                
-## 3        12/17/2003      4192084        C15194 Douglas M  Epling
-## 4        06/13/2006      7247461                                
-## 5        06/13/2006      7244271                                
-## 6        06/13/2006      7244269                                
-##   VIOLATOR_ID          VIOLATOR_NAME VIOLATOR_TYPE_CD
-## 1        E879 Hanover Resources, LLC       Contractor
-## 2         9NB        Peanut Trucking       Contractor
-## 3      P24500   Legacy Resources LLC         Operator
-## 4        E879 Hanover Resources, LLC       Contractor
-## 5        E879 Hanover Resources, LLC       Contractor
-## 6        E879 Hanover Resources, LLC       Contractor
-##                   MINE_NAME MINE_TYPE COAL_METAL_IND CONTRACTOR_ID
-## 1 Synergy Surface Mine No 1   Surface              C          E879
-## 2 Synergy Surface Mine No 1   Surface              C           9NB
-## 3 Synergy Surface Mine No 1   Surface              C              
-## 4 Synergy Surface Mine No 1   Surface              C          E879
-## 5 Synergy Surface Mine No 1   Surface              C          E879
-## 6 Synergy Surface Mine No 1   Surface              C          E879
-##   VIOLATION_ISSUE_DT VIOLATION_OCCUR_DT CAL_YR CAL_QTR FISCAL_YR
-## 1         04/11/2006         04/11/2006   2006       2      2006
-## 2         05/29/2003         05/29/2003   2003       2      2003
-## 3         11/25/2003         11/25/2003   2003       4      2004
-## 4         04/11/2006         04/11/2006   2006       2      2006
-## 5         04/11/2006         04/11/2006   2006       2      2006
-## 6         04/11/2006         04/11/2006   2006       2      2006
-##   FISCAL_QTR VIOLATION_ISSUE_TIME SIG_SUB SECTION_OF_ACT PART_SECTION
-## 1          3                 1025       Y                   77.404(a)
-## 2          3                 1000       Y                   77.404(a)
-## 3          1                 1000       Y                      72.620
-## 4          3                 1045       Y                   77.404(a)
-## 5          3                 1015       Y                   77.404(a)
-## 6          3                 1100       Y                     77.1104
-##   SECTION_OF_ACT_1 SECTION_OF_ACT_2 CIT_ORD_SAFE ORIG_TERM_DUE_DT
-## 1           104(a)               NA     Citation       04/13/2006
-## 2           104(a)               NA     Citation                 
-## 3           104(a)               NA     Citation                 
-## 4           104(a)               NA     Citation       04/13/2006
-## 5           104(a)               NA     Citation       04/13/2006
-## 6           104(a)               NA     Citation       04/13/2006
-##   ORIG_TERM_DUE_TIME LATEST_TERM_DUE_DT LATEST_TERM_DUE_TIME
-## 1                800         04/13/2006                  800
-## 2                 NA         05/30/2003                  800
-## 3                 NA         11/25/2003                 1200
-## 4                900         04/13/2006                  900
-## 5                800         04/13/2006                  800
-## 6                800         04/13/2006                  800
-##   TERMINATION_DT TERMINATION_TIME TERMINATION_TYPE VACATE_DT VACATE_TIME
-## 1     04/13/2006              843       Terminated        NA          NA
-## 2     05/29/2003             1130       Terminated        NA          NA
-## 3     11/25/2003             1015       Terminated        NA          NA
-## 4     04/13/2006             1015       Terminated        NA          NA
-## 5     04/13/2006              925       Terminated        NA          NA
-## 6     04/13/2006              800       Terminated        NA          NA
-##   INITIAL_VIOL_NO REPLACED_BY_ORDER_NO LIKELIHOOD INJ_ILLNESS NO_AFFECTED
-## 1              NA                      Reasonably    LostDays           1
-## 2              NA                      Reasonably    LostDays           1
-## 3              NA                      Reasonably    LostDays           2
-## 4              NA                      Reasonably    LostDays           1
-## 5              NA                      Reasonably    LostDays           1
-## 6              NA                      Reasonably    LostDays           2
-##      NEGLIGENCE WRITTEN_NOTICE ENFORCEMENT_AREA SPECIAL_ASSESS
-## 1 ModNegligence              N           Safety              N
-## 2 ModNegligence                          Safety              N
-## 3 ModNegligence                          Safety              N
-## 4 ModNegligence              N           Safety              N
-## 5 ModNegligence              N           Safety              N
-## 6 ModNegligence              N           Safety              N
-##   PRIMARY_OR_MILL RIGHT_TO_CONF_DT ASMT_GENERATED_IND FINAL_ORDER_ISSUE_DT
-## 1              NA               NA                  N           09/03/2006
-## 2              NA               NA                  N           10/08/2003
-## 3              NA               NA                  N           04/04/2004
-## 4              NA               NA                  N           09/03/2006
-## 5              NA               NA                  N           09/03/2006
-## 6              NA               NA                  N           09/03/2006
-##   PROPOSED_PENALTY AMOUNT_DUE AMOUNT_PAID BILL_PRINT_DT LAST_ACTION_CD
-## 1              107        107         107    07/20/2006           Paid
-## 2               72         72          72    08/19/2003           Paid
-## 3              177        177         177    02/19/2004           Paid
-## 4              107        107         107    07/20/2006           Paid
-## 5              107        107         107    07/20/2006           Paid
-## 6              114        114         114    07/20/2006           Paid
-##   LAST_ACTION_DT DOCKET_NO DOCKET_STATUS_CD CONTESTED_IND CONTESTED_DT
-## 1     08/26/2006                                        N             
-## 2     11/29/2004                                        N             
-## 3     03/13/2004                                        N             
-## 4     08/26/2006                                        N             
-## 5     08/26/2006                                        N             
-## 6     08/26/2006                                        N             
-##   VIOLATOR_VIOLATION_CNT VIOLATOR_INSPECTION_DAY_CNT
-## 1                      9                           0
-## 2                      2                           0
-## 3                      3                          10
-## 4                      9                           0
-## 5                      9                           0
-## 6                      9                           0
-##           CURRENT_MINE_NAME CURRENT_CONTROLLER_NAME
-## 1 Synergy Surface Mine No 1       Douglas M  Epling
-## 2 Synergy Surface Mine No 1       Douglas M  Epling
-## 3 Synergy Surface Mine No 1       Douglas M  Epling
-## 4 Synergy Surface Mine No 1       Douglas M  Epling
-## 5 Synergy Surface Mine No 1       Douglas M  Epling
-## 6 Synergy Surface Mine No 1       Douglas M  Epling
+##                             1                          
+## MINE_ID                     "4608870"                  
+## X                           "29413"                    
+## CURRENT_MINE_TYPE           "Surface"                  
+## EVENT_NO                    "4111925"                  
+## INSPECTION_BEGIN_DT         "04/11/2006"               
+## INSPECTION_END_DT           "06/13/2006"               
+## VIOLATION_NO                "7244272"                  
+## CONTROLLER_ID               ""                         
+## CONTROLLER_NAME             ""                         
+## VIOLATOR_ID                 "E879"                     
+## VIOLATOR_NAME               "Hanover Resources, LLC"   
+## VIOLATOR_TYPE_CD            "Contractor"               
+## MINE_NAME                   "Synergy Surface Mine No 1"
+## MINE_TYPE                   "Surface"                  
+## COAL_METAL_IND              "C"                        
+## CONTRACTOR_ID               "E879"                     
+## VIOLATION_ISSUE_DT          "04/11/2006"               
+## VIOLATION_OCCUR_DT          "04/11/2006"               
+## CAL_YR                      "2006"                     
+## CAL_QTR                     "2"                        
+## FISCAL_YR                   "2006"                     
+## FISCAL_QTR                  "3"                        
+## VIOLATION_ISSUE_TIME        "1025"                     
+## SIG_SUB                     "Y"                        
+## SECTION_OF_ACT              ""                         
+## PART_SECTION                "77.404(a)"                
+## SECTION_OF_ACT_1            "104(a)"                   
+## SECTION_OF_ACT_2            NA                         
+## CIT_ORD_SAFE                "Citation"                 
+## ORIG_TERM_DUE_DT            "04/13/2006"               
+## ORIG_TERM_DUE_TIME          "800"                      
+## LATEST_TERM_DUE_DT          "04/13/2006"               
+## LATEST_TERM_DUE_TIME        " 800"                     
+## TERMINATION_DT              "04/13/2006"               
+## TERMINATION_TIME            " 843"                     
+## TERMINATION_TYPE            "Terminated"               
+## VACATE_DT                   NA                         
+## VACATE_TIME                 NA                         
+## INITIAL_VIOL_NO             NA                         
+## REPLACED_BY_ORDER_NO        ""                         
+## LIKELIHOOD                  "Reasonably"               
+## INJ_ILLNESS                 "LostDays"                 
+## NO_AFFECTED                 "1"                        
+## NEGLIGENCE                  "ModNegligence"            
+## WRITTEN_NOTICE              "N"                        
+## ENFORCEMENT_AREA            "Safety"                   
+## SPECIAL_ASSESS              "N"                        
+## PRIMARY_OR_MILL             NA                         
+## RIGHT_TO_CONF_DT            NA                         
+## ASMT_GENERATED_IND          "N"                        
+## FINAL_ORDER_ISSUE_DT        "09/03/2006"               
+## PROPOSED_PENALTY            "107"                      
+## AMOUNT_DUE                  "107"                      
+## AMOUNT_PAID                 "107"                      
+## BILL_PRINT_DT               "07/20/2006"               
+## LAST_ACTION_CD              "Paid"                     
+## LAST_ACTION_DT              "08/26/2006"               
+## DOCKET_NO                   ""                         
+## DOCKET_STATUS_CD            ""                         
+## CONTESTED_IND               "N"                        
+## CONTESTED_DT                ""                         
+## VIOLATOR_VIOLATION_CNT      "9"                        
+## VIOLATOR_INSPECTION_DAY_CNT " 0"                       
+## CURRENT_MINE_NAME           "Synergy Surface Mine No 1"
+## CURRENT_CONTROLLER_NAME     "Douglas M  Epling"        
+##                             2                          
+## MINE_ID                     "4608870"                  
+## X                           "29414"                    
+## CURRENT_MINE_TYPE           "Surface"                  
+## EVENT_NO                    "4098645"                  
+## INSPECTION_BEGIN_DT         "04/01/2003"               
+## INSPECTION_END_DT           "06/20/2003"               
+## VIOLATION_NO                "4191617"                  
+## CONTROLLER_ID               ""                         
+## CONTROLLER_NAME             ""                         
+## VIOLATOR_ID                 "9NB"                      
+## VIOLATOR_NAME               "Peanut Trucking"          
+## VIOLATOR_TYPE_CD            "Contractor"               
+## MINE_NAME                   "Synergy Surface Mine No 1"
+## MINE_TYPE                   "Surface"                  
+## COAL_METAL_IND              "C"                        
+## CONTRACTOR_ID               "9NB"                      
+## VIOLATION_ISSUE_DT          "05/29/2003"               
+## VIOLATION_OCCUR_DT          "05/29/2003"               
+## CAL_YR                      "2003"                     
+## CAL_QTR                     "2"                        
+## FISCAL_YR                   "2003"                     
+## FISCAL_QTR                  "3"                        
+## VIOLATION_ISSUE_TIME        "1000"                     
+## SIG_SUB                     "Y"                        
+## SECTION_OF_ACT              ""                         
+## PART_SECTION                "77.404(a)"                
+## SECTION_OF_ACT_1            "104(a)"                   
+## SECTION_OF_ACT_2            NA                         
+## CIT_ORD_SAFE                "Citation"                 
+## ORIG_TERM_DUE_DT            ""                         
+## ORIG_TERM_DUE_TIME          NA                         
+## LATEST_TERM_DUE_DT          "05/30/2003"               
+## LATEST_TERM_DUE_TIME        " 800"                     
+## TERMINATION_DT              "05/29/2003"               
+## TERMINATION_TIME            "1130"                     
+## TERMINATION_TYPE            "Terminated"               
+## VACATE_DT                   NA                         
+## VACATE_TIME                 NA                         
+## INITIAL_VIOL_NO             NA                         
+## REPLACED_BY_ORDER_NO        ""                         
+## LIKELIHOOD                  "Reasonably"               
+## INJ_ILLNESS                 "LostDays"                 
+## NO_AFFECTED                 "1"                        
+## NEGLIGENCE                  "ModNegligence"            
+## WRITTEN_NOTICE              ""                         
+## ENFORCEMENT_AREA            "Safety"                   
+## SPECIAL_ASSESS              "N"                        
+## PRIMARY_OR_MILL             NA                         
+## RIGHT_TO_CONF_DT            NA                         
+## ASMT_GENERATED_IND          "N"                        
+## FINAL_ORDER_ISSUE_DT        "10/08/2003"               
+## PROPOSED_PENALTY            " 72"                      
+## AMOUNT_DUE                  " 72"                      
+## AMOUNT_PAID                 " 72"                      
+## BILL_PRINT_DT               "08/19/2003"               
+## LAST_ACTION_CD              "Paid"                     
+## LAST_ACTION_DT              "11/29/2004"               
+## DOCKET_NO                   ""                         
+## DOCKET_STATUS_CD            ""                         
+## CONTESTED_IND               "N"                        
+## CONTESTED_DT                ""                         
+## VIOLATOR_VIOLATION_CNT      "2"                        
+## VIOLATOR_INSPECTION_DAY_CNT " 0"                       
+## CURRENT_MINE_NAME           "Synergy Surface Mine No 1"
+## CURRENT_CONTROLLER_NAME     "Douglas M  Epling"        
+##                             3                          
+## MINE_ID                     "4608870"                  
+## X                           "29417"                    
+## CURRENT_MINE_TYPE           "Surface"                  
+## EVENT_NO                    "4103570"                  
+## INSPECTION_BEGIN_DT         "10/01/2003"               
+## INSPECTION_END_DT           "12/17/2003"               
+## VIOLATION_NO                "4192084"                  
+## CONTROLLER_ID               "C15194"                   
+## CONTROLLER_NAME             "Douglas M  Epling"        
+## VIOLATOR_ID                 "P24500"                   
+## VIOLATOR_NAME               "Legacy Resources LLC"     
+## VIOLATOR_TYPE_CD            "Operator"                 
+## MINE_NAME                   "Synergy Surface Mine No 1"
+## MINE_TYPE                   "Surface"                  
+## COAL_METAL_IND              "C"                        
+## CONTRACTOR_ID               ""                         
+## VIOLATION_ISSUE_DT          "11/25/2003"               
+## VIOLATION_OCCUR_DT          "11/25/2003"               
+## CAL_YR                      "2003"                     
+## CAL_QTR                     "4"                        
+## FISCAL_YR                   "2004"                     
+## FISCAL_QTR                  "1"                        
+## VIOLATION_ISSUE_TIME        "1000"                     
+## SIG_SUB                     "Y"                        
+## SECTION_OF_ACT              ""                         
+## PART_SECTION                "72.620"                   
+## SECTION_OF_ACT_1            "104(a)"                   
+## SECTION_OF_ACT_2            NA                         
+## CIT_ORD_SAFE                "Citation"                 
+## ORIG_TERM_DUE_DT            ""                         
+## ORIG_TERM_DUE_TIME          NA                         
+## LATEST_TERM_DUE_DT          "11/25/2003"               
+## LATEST_TERM_DUE_TIME        "1200"                     
+## TERMINATION_DT              "11/25/2003"               
+## TERMINATION_TIME            "1015"                     
+## TERMINATION_TYPE            "Terminated"               
+## VACATE_DT                   NA                         
+## VACATE_TIME                 NA                         
+## INITIAL_VIOL_NO             NA                         
+## REPLACED_BY_ORDER_NO        ""                         
+## LIKELIHOOD                  "Reasonably"               
+## INJ_ILLNESS                 "LostDays"                 
+## NO_AFFECTED                 "2"                        
+## NEGLIGENCE                  "ModNegligence"            
+## WRITTEN_NOTICE              ""                         
+## ENFORCEMENT_AREA            "Safety"                   
+## SPECIAL_ASSESS              "N"                        
+## PRIMARY_OR_MILL             NA                         
+## RIGHT_TO_CONF_DT            NA                         
+## ASMT_GENERATED_IND          "N"                        
+## FINAL_ORDER_ISSUE_DT        "04/04/2004"               
+## PROPOSED_PENALTY            "177"                      
+## AMOUNT_DUE                  "177"                      
+## AMOUNT_PAID                 "177"                      
+## BILL_PRINT_DT               "02/19/2004"               
+## LAST_ACTION_CD              "Paid"                     
+## LAST_ACTION_DT              "03/13/2004"               
+## DOCKET_NO                   ""                         
+## DOCKET_STATUS_CD            ""                         
+## CONTESTED_IND               "N"                        
+## CONTESTED_DT                ""                         
+## VIOLATOR_VIOLATION_CNT      "3"                        
+## VIOLATOR_INSPECTION_DAY_CNT "10"                       
+## CURRENT_MINE_NAME           "Synergy Surface Mine No 1"
+## CURRENT_CONTROLLER_NAME     "Douglas M  Epling"
 ```
 
 
@@ -596,6 +857,11 @@ Reduce mdat_wv to only mines that are not abandoned
 ```r
 mdat_wv <- mdat_wv[grep("Abandoned.*", mdat_wv$CURRENT_MINE_STATUS, invert = TRUE), 
     ]
+nrow(mdat_wv)
+```
+
+```
+## [1] 5
 ```
 
 Reduce inspection and violation tables accordingly
@@ -603,6 +869,19 @@ Reduce inspection and violation tables accordingly
 ```r
 idat <- subset(idat, MINE_ID %in% mdat_wv$MINE_ID)
 vdat <- subset(vdat, MINE_ID %in% mdat_wv$MINE_ID)
+nrow(idat)
+```
+
+```
+## [1] 78
+```
+
+```r
+nrow(vdat)
+```
+
+```
+## [1] 30
 ```
 
 ## Create a time series by mine and month
@@ -823,13 +1102,52 @@ Count violations by day.
 ```r
 vxday <- ddply(vdat, .(violation.occur.dt), nrow)
 names(vxday) <- c("date", "vcount")
+```
+
+
+Make a calendar heat map
+
+
+```r
 calendarHeat(subset(vxday, year(date) == 2011)$date, subset(vxday, year(date) == 
     2011)$vcount)
 ```
 
 ```
-## Error: could not find function "calendarHeat"
+## Loading required package: lattice
 ```
+
+```
+## Loading required package: grid
+```
+
+```
+## Loading required package: chron
+```
+
+```
+## Attaching package: 'chron'
+```
+
+```
+## The following object(s) are masked from 'package:lubridate':
+## 
+## days, hours, minutes, seconds, years
+```
+
+```
+## Warning: the condition has length > 1 and only the first element will be
+## used
+```
+
+```
+## Warning: no non-missing arguments to min; returning Inf
+```
+
+```
+## Error: character string is not in a standard unambiguous format
+```
+
 
 
 Normalize inspections, violations, and accidents into "event" objects

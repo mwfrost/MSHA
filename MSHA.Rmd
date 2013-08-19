@@ -1,29 +1,76 @@
 Analysis of MSHA Inspections, Violations, and Accident Data
 ========================================================
 
-```{r chunklabel}
+_An open and ongoing analysis of the data provided by the [US Mine Safety & Health Administration](http://www.msha.gov/OpenGovernmentData/OGIMSHA.asp). See [github.com/mwfrost/MSHA](https://github.com/mwfrost/MSHA) for details._
+
+```{r}
 require(reshape)
 require(plyr)
 require(ggplot2)
 require(lubridate)
+require(xtable)
+require(scales)
 setwd('~/Code/MSHA/')
+source('./lib/calendarHeat.r')
+Sys.setlocale(locale="C")
 ```
 ## Load Data
 
 ### Load Mine Data
 ```{r}
 mdat <- read.table('./data/msha_source/Mines.TXT', header=T, sep="|", fill=T, as.is=c(1:59),quote="\"")
-head(mdat)
+t(head(mdat,3))
 mdat_wv <- subset(mdat, STATE == 'WV' & COAL_METAL_IND == 'C')
 
 ```
 
+*rmongodb* approach
+
+Write each mine to a document in a mongodb collection
+
+```{r mongo.write.mines}
+require(rmongodb)
+
+
+data.frame.to.mongo <- function(df, db, col, fields=names(df)) {
+  mongo <- mongo.create()
+  if (mongo.is.connected(mongo)) {
+    for(i in 1:nrow(df)) {
+        b <- mongo.bson.from.list(df[i,fields])
+        #print(b)
+        #print('----------------')
+        if (!is.null(b)){
+          mongo.insert(mongo, paste(db, col, sep='.'), b)
+          }
+        else {
+          print('NULL BSON object')
+          print(t(df[i,]))
+              }
+      }  
+  }
+}
+
+
+
+db <- 'msha'
+col <- 'mines'
+fields <- setdiff(names(mdat), 'DIRECTIONS_TO_MINE')
+data.frame.to.mongo(mdat, db, col, fields)
+
+
+
+
+```
+
+Example mongodb search: `db.mines.find({MINE_ID : 1519137})`
+
+
 ### Inspections
-To periodically rebuild this WV set of records, run `./munge/01-extract-wv.R`
+To periodically rebuild this WV set of records, run `./01-extract-wv.R`
 ```{r}
 idat <- read.csv("./data/wv_idat.csv")
 idat <- merge(idat, mdat_wv[,c('MINE_ID','CURRENT_MINE_NAME','CURRENT_CONTROLLER_NAME')])
-head(idat)
+t(head(idat,3))
 ```
 
 ### Accidents
@@ -33,7 +80,7 @@ adat <- read.table('./data/msha_source/Accidents.TXT', header=T, sep="|", fill=T
 adat <- subset(adat, FIPS_STATE_CD==54)
 adat <- merge(adat, mdat_wv[,c('MINE_ID','CURRENT_MINE_NAME','CURRENT_CONTROLLER_NAME')])
 adat$accident.key <- seq(1:nrow(adat))
-head(adat)
+t(head(adat,3))
 ```
 
 ### Violations
@@ -41,18 +88,21 @@ head(adat)
 ```{r}
 vdat <- read.csv("./data/wv_vdat.csv")
 vdat <- merge(vdat, mdat_wv[,c('MINE_ID','CURRENT_MINE_NAME','CURRENT_CONTROLLER_NAME')])
-head(vdat)
+t(head(vdat,3))
 ```
 
 
 Reduce mdat_wv to only mines that are not abandoned
 ```{r}
 mdat_wv <- mdat_wv[grep('Abandoned.*',mdat_wv$CURRENT_MINE_STATUS, invert=TRUE),]
+nrow(mdat_wv)
 ```
 Reduce inspection and violation tables accordingly
 ```{r}
 idat <- subset(idat, MINE_ID %in% mdat_wv$MINE_ID)
 vdat <- subset(vdat, MINE_ID %in% mdat_wv$MINE_ID)
+nrow(idat)
+nrow(vdat)
 ```
 ## Create a time series by mine and month
 
@@ -76,9 +126,15 @@ Count violations by day.
 ```{r}
 vxday <- ddply(vdat, .(violation.occur.dt), nrow)
 names(vxday) <- c('date','vcount')
+```
+
+Make a calendar heat map
+
+```{r}
 calendarHeat(subset(vxday, year(date)==2011)$date , subset(vxday, year(date)==2011)$vcount)
 
 ```
+
 
 Normalize inspections, violations, and accidents into "event" objects
 
@@ -98,8 +154,6 @@ edays, short for event days, is a temporary hack
 
 ```{r}
 edays<-cast(events, event.day+MINE_ID~event, value='event.key', fun.aggregate='min')
-
-
 
 eventsRR <- subset(edays, MINE_ID == 4601318)
 
