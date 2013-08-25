@@ -31,7 +31,6 @@ Write each mine to a document in a mongodb collection
 ```{r mongo.write.mines}
 require(rmongodb)
 
-
 data.frame.to.mongo <- function(df, db, col, fields=names(df)) {
   mongo <- mongo.create()
   if (mongo.is.connected(mongo)) {
@@ -55,14 +54,67 @@ data.frame.to.mongo <- function(df, db, col, fields=names(df)) {
 db <- 'msha'
 col <- 'mines'
 fields <- setdiff(names(mdat), 'DIRECTIONS_TO_MINE')
-data.frame.to.mongo(mdat, db, col, fields)
-
-
-
+# data.frame.to.mongo(mdat, db, col, fields)
 
 ```
 
+```{r rmongodb.2}
+  mongo <- mongo.create()
+buf <- mongo.bson.buffer.create()
+        mongo.bson.buffer.append(buf, "MINE_ID", 1519137)
+        query <- mongo.bson.from.buffer(buf)
+
+mongo.find(mongo, 'msha', query)
+
+```
+
+PITA.
+Try the RMongo library instead.
+
+```{r rmongo}
+require(RMongo)
+
+mongo <- mongoDbConnect(dbName="msha", host="localhost",port='27017')
+
+output <- dbAggregate(mongo, "mines",
+                       c('{ $match: { NO_EMPLOYEES: {$gt: 0} } }'
+                        ,'{ $group: { _id: "$PRIMARY_SIC", employees : {$sum:"$NO_EMPLOYEES"}} }'
+                      )
+                      )
+
+print(output)
+
+system.time(
+  dbAggregate(mongo, "mines",
+                       c('{ $match: { NO_EMPLOYEES: {$gt: 0} } }'
+                        ,'{ $group: { _id: "$PRIMARY_SIC", employees : {$sum:"$NO_EMPLOYEES"}} }'
+                      )
+                      )
+)
+
+```
+
+
+Some sample Mongo aggregations on the Mines collection
+Based on these examples: http://docs.mongodb.org/manual/reference/sql-aggregation-comparison/
+
 Example mongodb search: `db.mines.find({MINE_ID : 1519137})`
+
+
+```{r mongo.employees}
+db.mines.aggregate( [
+   { $match: { NO_EMPLOYEES: {$gt: 0} } },
+   { $group: { _id: "$PRIMARY_SIC",
+               employees: { $sum: "$NO_EMPLOYEES" } } }
+] )
+```
+
+```{r ddply.employees}
+ system.time(
+  ddply(mdat[mdat$NO_EMPLOYEES > 0,], .(PRIMARY_SIC), summarize, employees=sum(NO_EMPLOYEES))
+           )
+```
+
 
 
 ### Inspections
