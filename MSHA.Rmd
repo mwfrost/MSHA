@@ -10,6 +10,8 @@ require(ggplot2)
 require(lubridate)
 require(xtable)
 require(scales)
+require(RJSONIO)
+
 setwd('~/Code/MSHA/')
 source('./lib/calendarHeat.r')
 Sys.setlocale(locale="C")
@@ -71,18 +73,35 @@ mongo.find(mongo, 'msha', query)
 PITA.
 Try the RMongo library instead.
 
+Some sample Mongo aggregations on the Mines collection
+Based on these examples: http://docs.mongodb.org/manual/reference/sql-aggregation-comparison/
+
+Example mongodb search: `db.mines.find({MINE_ID : 1519137})`
+
 ```{r rmongo}
 require(RMongo)
 
 mongo <- mongoDbConnect(dbName="msha", host="localhost",port='27017')
 
 output <- dbAggregate(mongo, "mines",
-                       c('{ $match: { NO_EMPLOYEES: {$gt: 0} } }'
-                        ,'{ $group: { _id: "$PRIMARY_SIC", employees : {$sum:"$NO_EMPLOYEES"}} }'
+                       c('{ 
+                         $match: { NO_EMPLOYEES: {$gt: 0} } 
+                         }'
+                        ,'{ 
+                         $group: { 
+                         _id: "$PRIMARY_SIC", 
+                         employees : {$sum:"$NO_EMPLOYEES"}
+                         } 
+                         }'
                       )
                       )
 
 print(output)
+
+output <- lapply(output, fromJSON)
+
+output <- do.call(rbind, output)
+output <- data.frame(output)
 
 system.time(
   dbAggregate(mongo, "mines",
@@ -95,24 +114,19 @@ system.time(
 ```
 
 
-Some sample Mongo aggregations on the Mines collection
-Based on these examples: http://docs.mongodb.org/manual/reference/sql-aggregation-comparison/
-
-Example mongodb search: `db.mines.find({MINE_ID : 1519137})`
-
-
-```{r mongo.employees}
-db.mines.aggregate( [
-   { $match: { NO_EMPLOYEES: {$gt: 0} } },
-   { $group: { _id: "$PRIMARY_SIC",
-               employees: { $sum: "$NO_EMPLOYEES" } } }
-] )
-```
-
 ```{r ddply.employees}
  system.time(
   ddply(mdat[mdat$NO_EMPLOYEES > 0,], .(PRIMARY_SIC), summarize, employees=sum(NO_EMPLOYEES))
            )
+```
+
+
+```{r rmongo.sample.queries}
+dbGetQuery(mongo, 'mines', '{STATE: "WV", "COAL_METAL_IND" :"C"}')
+
+# Robinson Run
+dbGetQuery(mongo, 'mines', '{MINE_ID: 4601318}', '{MINE_ID:1 }')
+
 ```
 
 
@@ -123,7 +137,32 @@ To periodically rebuild this WV set of records, run `./01-extract-wv.R`
 idat <- read.csv("./data/wv_idat.csv")
 idat <- merge(idat, mdat_wv[,c('MINE_ID','CURRENT_MINE_NAME','CURRENT_CONTROLLER_NAME')])
 t(head(idat,3))
+
 ```
+
+
+```{r mongo.inspections}
+# add all the Robinson Run inspections
+rr.i <- idat[idat$MINE_ID == 4601318,]
+#data.frame.to.mongo(rr.i, 'msha', 'inspections')
+#  data.frame.to.mongo(idat, 'msha', 'inspections')
+system.time(
+  dbAggregate(mongo, "inspections",
+                       c('{ $match: { CURRENT_CONTROLLER_NAME: "CONSOL Energy Inc" } }'
+                        ,'{ $group: { _id: "$CURRENT_MINE_NAME", inspections : {$sum:1}} }'
+                      )
+                      )
+)
+
+system.time(
+  ddply(
+    subset(idat, CURRENT_CONTROLLER_NAME == 'CONSOL Energy Inc'), 
+    .(CURRENT_MINE_NAME) , nrow
+    )
+)
+
+```
+
 
 ### Accidents
 ```{r}
