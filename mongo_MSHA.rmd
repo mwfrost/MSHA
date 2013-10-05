@@ -1,0 +1,288 @@
+Analysis of MSHA Inspections, Violations, and Accident Data
+========================================================
+
+_An open and ongoing analysis of the data provided by the [US Mine Safety & Health Administration](http://www.msha.gov/OpenGovernmentData/OGIMSHA.asp). See [github.com/mwfrost/MSHA](https://github.com/mwfrost/MSHA) for details._
+
+```{r}
+require(reshape)
+require(plyr)
+require(ggplot2)
+require(lubridate)
+require(xtable)
+require(scales)
+
+require(rmongodb)
+require(RMongo)
+require(RJSONIO)
+
+setwd('~/Code/MSHA/')
+Sys.setlocale(locale="C")
+```
+## Load Data
+
+### Load Mine Data
+```{r}
+mdat <- read.table('./data/msha_source/Mines.TXT', header=T, sep="|", fill=T, as.is=c(1:59),quote="\"")
+t(head(mdat,3))
+
+```
+
+This script uses `rmongodb` to write the flat files to mongo collections, and uses `RMongo` to read them.
+
+*rmongodb* 
+
+Write each source table to a mongodb collection
+
+```{r mongo.write.mines}
+
+data.frame.to.mongo <- function(df, db, col, fields=names(df)) {
+  mongo <- mongo.create()
+  if (mongo.is.connected(mongo)) {
+    for(i in 1:nrow(df)) {
+        b <- mongo.bson.from.list(df[i,fields])
+        #print(b)
+        #print('----------------')
+        if (!is.null(b)){
+          mongo.insert(mongo, paste(db, col, sep='.'), b)
+          }
+        else {
+          print('NULL BSON object')
+          print(t(df[i,]))
+              }
+      }  
+  }
+}
+
+
+
+fields <- setdiff(names(mdat), 'DIRECTIONS_TO_MINE')
+# data.frame.to.mongo(mdat, 'msha', 'mines', fields)
+
+```
+
+Now switch to the `RMongo` library and check the data. Some sample Mongo aggregations on the Mines collection, based on these examples: 
+
+http://docs.mongodb.org/manual/reference/sql-aggregation-comparison/
+
+http://docs.mongodb.org/manual/reference/sql-comparison/
+
+Example mongodb search: `db.mines.find({MINE_ID : 1519137})`
+
+
+```{r check.mines}
+
+mongo <- mongoDbConnect(dbName="msha", host="localhost",port='27017')
+
+output <- dbAggregate(mongo, "mines",
+                       c('{ 
+                         $match: { NO_EMPLOYEES: {$gt: 0} } 
+                         }'
+                        ,'{ 
+                         $group: { 
+                         _id: "$PRIMARY_SIC", 
+                         employees : {$sum:"$NO_EMPLOYEES"}
+                         } 
+                         }'
+                      )
+                      )
+
+print(output)
+
+output <- lapply(output, fromJSON)
+
+output <- do.call(rbind, output)
+output <- data.frame(output)
+
+
+```
+
+Compare the time it takes to run a simple aggregation in mongo to the same task with ddply()
+
+```{r compare}
+mongo <- mongoDbConnect(dbName="msha", host="localhost",port='27017')
+
+system.time(
+  dbAggregate(mongo, "mines",
+                       c('{ $match: { NO_EMPLOYEES: {$gt: 0} } }'
+                        ,'{ $group: { _id: "$PRIMARY_SIC", employees : {$sum:"$NO_EMPLOYEES"}} }'
+                      )
+                      )
+)
+
+
+ system.time(
+  ddply(mdat[mdat$NO_EMPLOYEES > 0,], .(PRIMARY_SIC), summarize, employees=sum(NO_EMPLOYEES))
+           )
+```
+
+Sample rmongodb queries:
+
+```{r rmongodb.samples}
+  mongo1 <- mongo.create()
+  mongo.count(mongo1, 'msha.mines', query=mongo.bson.empty())
+```
+
+
+
+
+
+Sample RMongo queries:
+
+```{r rmongo.sample.queries}
+
+dbGetQuery(mongo, 'mines', '{STATE: "WV", "COAL_METAL_IND" :"C"}')
+
+# Robinson Run
+dbGetQuery(mongo, 'mines', '{MINE_ID: 4601318}')
+
+dbAggregate(mongo, "mines",
+                       c(
+                        '{ 
+                         $group: { 
+                         _id: "$PRIMARY_SIC", 
+                         employees : {$sum:"$NO_EMPLOYEES"}
+                         } 
+                         }'
+                      )
+                      )
+
+```
+
+Evantually add some utility functions
+
+```{r mongo.functions}
+
+
+```
+
+
+### Inspections
+
+Inspections.txt is too long to store in memory in R, so read pieces of it and load those into mongo.
+
+```{r}
+skip_count <- 250000
+start_row <- skip_count + 1
+
+idat <- read.table('./data/msha_source/Inspections.TXT', nrows=skip_count, header=T, sep="|", fill=T,  quote="\"",comment.char = "")
+inames <- names(idat)
+
+while (start_row < 2000000) {
+     print(paste("About to scan records ", start_row, " through " , start_row + skip_count))
+
+  idat_temp <- read.table('./data/msha_source/Inspections.TXT', nrows=skip_count, header=F, sep="|", fill=T,  skip = start_row ,quote="\"",comment.char = "")
+	names(idat_temp) <- inames
+	print(paste("Rows collected: " , nrow(idat)))
+     
+#  data.frame.to.mongo(idat_temp, 'msha', 'inspections', inames)
+   
+     
+	start_row <- start_row + skip_count
+}
+
+  mongo1 <- mongo.create()
+  mongo.count(mongo1, 'msha.inspections', query=mongo.bson.empty())
+```
+
+Compare the operation time
+
+```{r compare.inspections}
+
+system.time(
+  dbAggregate(mongo, "inspections",
+                       c('{ $match: { CURRENT_CONTROLLER_NAME: "CONSOL Energy Inc" } }'
+                        ,'{ $group: { _id: "$CURRENT_MINE_NAME", inspections : {$sum:1}} }'
+                      )
+                      )
+)
+
+system.time(
+  ddply(
+    subset(idat, CURRENT_CONTROLLER_NAME == 'CONSOL Energy Inc'), 
+    .(CURRENT_MINE_NAME) , nrow
+    )
+)
+
+
+```
+
+
+### Accidents
+```{r}
+# adat <- read.table('./data/msha_source/Accidents.TXT', header=T, sep="|", fill=T, quote="\"",comment.char = "")
+
+# data.frame.to.mongo(adat, 'msha', 'accidents')
+
+  mongo1 <- mongo.create()
+  mongo.count(mongo1, 'msha.accidents', query=mongo.bson.empty())
+
+```
+
+### Violations
+
+```{r}
+skip_count <- 250000
+start_row <- skip_count + 1
+
+# vdat <- read.table('./data/msha_source/Violations.TXT', nrows=skip_count, header=T, sep="|", fill=T, as.is=c(1:55), quote="\"",comment.char = "")
+vnames <- names(vdat)
+
+while (start_row < 2000000) {
+     print(paste("About to scan records ", start_row, " through " , start_row + skip_count))
+
+  vdat_temp <- read.table('./data/msha_source/Violations.TXT', nrows=skip_count, header=F, sep="|", fill=T, as.is=c(1:55), skip = start_row ,quote="",comment.char = "")
+	names(vdat_temp) <- vnames
+
+#  data.frame.to.mongo(vdat_temp, 'msha', 'violations')
+	
+  print(paste("Rows collected: " , nrow(vdat)))
+#	print(paste("Events ", vdat[last_row,c("EVENT_NO")] , " through " , vdat[nrow(vdat),c("EVENT_NO")]))
+	start_row <- start_row + skip_count
+#	last_row <- nrow(vdat)
+}
+
+
+```
+Check the violations data.
+
+```{r check.violations}
+  mongo1 <- mongo.create()
+  mongo.count(mongo1, 'msha.violations', query=mongo.bson.empty())
+```
+
+
+
+Next steps:
+
+- Reduce the data sets to only include mines that aren't abandoned
+
+- For each accident, calculate the days since the previous accident at that mine
+
+```{r since.last.accident}
+adat.x <- subset(adat, MINE_ID %in% c(4601318) )
+ddply(adat.x, .(MINE_ID), 
+```
+
+
+- Normalize inspections, violations, and accidents into "event" objects.
+
+- Add a time series for events to each mine object
+
+Reference links:
+
+[seanhess]: http://seanhess.github.io/2012/02/01/mongodb_relational.html
+[mongodb]: http://docs.mongodb.org/manual/tutorial/query-documents/
+[mongodb 2]: http://docs.mongodb.org/manual/reference/sql-comparison/
+[mongodb 3]: http://docs.mongodb.org/manual/reference/method/db.collection.find/#db.collection.find
+[mongodb 4]: http://docs.mongodb.org/manual/reference/sql-aggregation-comparison/
+[mongodb 5]: http://docs.mongodb.org/manual/reference/aggregation/operators/
+[mongodb 6]: http://docs.mongodb.org/manual/tutorial/aggregation-examples/
+[msha]: http://www.msha.gov/OpenGovernmentData/OGIMSHA.asp
+[readthedocs]: https://media.readthedocs.org/pdf/a-little-book-of-r-for-time-series/latest/a-little-book-of-r-for-time-series.pdf
+
+```{r denormalize}
+
+```
+
+
+

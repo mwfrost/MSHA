@@ -74,7 +74,11 @@ PITA.
 Try the RMongo library instead.
 
 Some sample Mongo aggregations on the Mines collection
-Based on these examples: http://docs.mongodb.org/manual/reference/sql-aggregation-comparison/
+Based on these examples: 
+
+http://docs.mongodb.org/manual/reference/sql-aggregation-comparison/
+
+http://docs.mongodb.org/manual/reference/sql-comparison/
 
 Example mongodb search: `db.mines.find({MINE_ID : 1519137})`
 
@@ -129,6 +133,15 @@ dbGetQuery(mongo, 'mines', '{MINE_ID: 4601318}', '{MINE_ID:1 }')
 
 ```
 
+```{r mongo.functions}
+function minebyid(id) {
+    mine <- db.mines.findOne({_id: id})
+   # mine.inspections <- db.comments.find({postId: id}).toArray()
+    return mine
+}
+
+
+```
 
 
 ### Inspections
@@ -167,6 +180,9 @@ system.time(
 ### Accidents
 ```{r}
 adat <- read.table('./data/msha_source/Accidents.TXT', header=T, sep="|", fill=T, quote="\"",comment.char = "")
+
+data.frame.to.mongo(adat, 'msha', 'accidents')
+
 # WV is FIPS 54
 adat <- subset(adat, FIPS_STATE_CD==54)
 adat <- merge(adat, mdat_wv[,c('MINE_ID','CURRENT_MINE_NAME','CURRENT_CONTROLLER_NAME')])

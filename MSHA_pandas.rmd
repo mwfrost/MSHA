@@ -1,0 +1,117 @@
+Analysis of MSHA Inspections, Violations, and Accident Data
+========================================================
+
+_An open and ongoing analysis of the data provided by the [US Mine Safety & Health Administration](http://www.msha.gov/OpenGovernmentData/OGIMSHA.asp). See [github.com/mwfrost/MSHA](https://github.com/mwfrost/MSHA) for details._
+
+```{r}
+require(reshape)
+require(plyr)
+require(ggplot2)
+require(lubridate)
+require(xtable)
+require(scales)
+require(RJSONIO)
+
+setwd('~/Code/MSHA/')
+source('./lib/calendarHeat.r')
+Sys.setlocale(locale="C")
+```
+
+Use the python `pandas` library to select and write out files small enough for R to handle gracefully.
+
+```{r read.csv.files}
+mdat <- read.csv('data/wv_mines.csv')
+vdat <- read.csv('data/wv_violations.csv')
+idat <- read.csv('data/wv_inspections.csv')
+adat <- read.csv('data/wv_accidents.csv')
+```
+
+```{r add.dates}
+
+mdat$current.status.dt <- mdy(as.character(mdat$CURRENT_STATUS_DT))
+vdat$violation.occur.dt <- mdy(as.character(vdat$VIOLATION_OCCUR_DT))
+
+idat$inspection.begin.dt <- ymd(gsub('-','/', gsub(' 00:00:00','',idat$INSPECTION_BEGIN_DT)))
+adat$accident.dt <- ymd(gsub('-','/', gsub(' 00:00:00','',adat$ACCIDENT_DT)))
+
+```
+
+
+```{r trailing.violations}
+
+trailing.events <- function(mine, acc.dt=now(),trailing.days=90 ){
+      d <- data.frame(mine, acc.dt)
+      ddply(d, .(mine, acc.dt), function(x){ 
+      c(trailing.accidents=nrow(subset(adat, MINE_ID == x$mine 
+                                   & accident.dt < x$acc.dt
+                                   & accident.dt > x$acc.dt - ddays(trailing.days)
+                                   )),
+    trailing.violations=nrow(subset(vdat, MINE_ID == x$mine 
+                                   & violation.occur.dt < x$acc.dt
+                                   & violation.occur.dt > x$acc.dt - ddays(trailing.days)
+                                   )),
+    trailing.injuries=sum(subset(vdat, MINE_ID == x$mine 
+                                   & violation.occur.dt < x$acc.dt
+                                   & violation.occur.dt > x$acc.dt - ddays(trailing.days)
+                                   )$NO_INJURIES,na.rm = TRUE),  
+    trailing.lost.days=sum(subset(vdat, MINE_ID == x$mine 
+                                   & violation.occur.dt < x$acc.dt
+                                   & violation.occur.dt > x$acc.dt - ddays(trailing.days)
+                                   )$DAYS_LOST,na.rm = TRUE), 
+     trailing.inspections=nrow(subset(idat, MINE_ID == x$mine 
+                                   & inspection.begin.dt < x$acc.dt
+                                   & inspection.begin.dt > x$acc.dt - ddays(trailing.days)
+                                   ))       
+        )
+      }
+    )
+}
+
+# Tests
+# trailing.events(c(4601318, 4601456) , ymd(c('2005-09-08', '2011-08-05')), 30)
+
+# trailing.events(adat[1:10,'MINE_ID'], adat[1:10, 'accident.dt'], 30)
+
+```
+
+Every day of operation for every mine needs a record, so we can try to identify any differences between the days without accidents and those with. We don't have the full span of operating days, though. One way to fake it is to run the span between the first and last recorded inspections for each mine
+
+```{r mine.days}
+
+# x is the data frame of inspections
+fill.days <- function(x){
+  data.frame(
+    mine=x$MINE_ID[1],
+    mine.day=seq(min(x$inspection.begin.dt), max(x$inspection.begin.dt), by ="day")
+             )
+  }
+# Tests
+# fill.days(idat[idat$MINE_ID==4609060,])
+
+# by(idat[idat$MINE_ID %in% c(4609060,4601318),], idat[idat$MINE_ID %in% c(4609060,4601318),'MINE_ID'], fill.days)
+
+mine.days <- ddply(idat, .(MINE_ID), fill.days) 
+mine.days$mine <- NULL
+
+
+```
+
+Now that there's a unique record for every day of operation (sort of), calculate the trailing accidents, violations, and inspections for each mine/day.
+
+```{r mine.day.stats}
+head(trailing.events(mine.days[1:10,'MINE_ID'], mine.days[1:10, 'mine.day'], 30))
+
+mine.day.stats <- trailing.events(mine.days[mine.days$MINE_ID %in% c(4609060,4601318),'MINE_ID'], mine.days[mine.days$MINE_ID %in% c(4609060,4601318), 'mine.day'], 30)
+
+head(mine.day.stats)
+```
+
+```{r }
+ggplot(mine.day.stats[mine.day.stats$mine == 4601318,]) + 
+  geom_line(aes(x=acc.dt,y=trailing.violations)) + 
+  geom_line(aes(x=acc.dt,y=trailing.accidents),color='red') +
+  geom_line(aes(x=acc.dt,y=trailing.inspections),color='blue')
+
+ggplot(mine.day.stats) + 
+  geom_point(aes(x=trailing.accidents,y=trailing.violations))
+```
