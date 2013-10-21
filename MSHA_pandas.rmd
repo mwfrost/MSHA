@@ -17,7 +17,17 @@ source('./lib/calendarHeat.r')
 Sys.setlocale(locale="C")
 ```
 
+### Utility scripts
+(not run in this process)
+
+Download the most recent files
+`.\data\msha_source\download_source.sh`
+
+Unzip the files, replacing the old copies
+`\data\msha_source\unzip_source.sh\`
+
 Use the python `pandas` library to select and write out files small enough for R to handle gracefully.
+`.\extract_wv.py`
 
 ```{r read.csv.files}
 mdat <- read.csv('data/wv_mines.csv')
@@ -96,22 +106,68 @@ mine.days$mine <- NULL
 
 ```
 
-Now that there's a unique record for every day of operation (sort of), calculate the trailing accidents, violations, and inspections for each mine/day.
+Now that there's a unique record for every day of operation (sort of), calculate the trailing accidents, violations, and inspections for each mine/day, then join all the accident records to determine which days involved accidents.
+
+TODO: currenty ignoring the problems caused by multiple accidents per day
+
+TODO: This step could probably be much faster as a pandas aggregation pipeline.
 
 ```{r mine.day.stats}
 head(trailing.events(mine.days[1:10,'MINE_ID'], mine.days[1:10, 'mine.day'], 30))
 
 mine.day.stats <- trailing.events(mine.days[mine.days$MINE_ID %in% c(4609060,4601318),'MINE_ID'], mine.days[mine.days$MINE_ID %in% c(4609060,4601318), 'mine.day'], 30)
+# acc.dt is now op.dt
+names(mine.day.stats) <- gsub('acc.dt','op.dt', names(mine.day.stats))
 
-head(mine.day.stats)
+mine.day.stats <- merge(mine.day.stats, adat[,c('MINE_ID','accident.dt','DEGREE_INJURY_CD','CLASSIFICATION')], by.x=c('mine','op.dt'), by.y=c('MINE_ID','accident.dt'), all.x=TRUE)
+
+head(subset(mine.day.stats, !is.na(DEGREE_INJURY_CD)))
 ```
 
-```{r }
-ggplot(mine.day.stats[mine.day.stats$mine == 4601318,]) + 
-  geom_line(aes(x=acc.dt,y=trailing.violations)) + 
-  geom_line(aes(x=acc.dt,y=trailing.accidents),color='red') +
-  geom_line(aes(x=acc.dt,y=trailing.inspections),color='blue')
+
+
+Join some useful categories to the per mine/day stats and flag accident days
+
+```{r mine.joins}
+mine.day.stats <- merge(mine.day.stats, 
+                        mdat[
+                          ,
+                          c('MINE_ID','CURRENT_MINE_NAME','COAL_METAL_IND','CURRENT_OPERATOR_NAME','CURRENT_CONTROLLER_NAME','STATE','FIPS_CNTY_NM','NO_EMPLOYEES')
+                             ] ,
+                        by.x=c('mine'),
+                        by.y=c('MINE_ID')
+                        )
+mine.day.stats$bin.inj <- ifelse(is.na(mine.day.stats$DEGREE_INJURY_CD), 0, 1)
+mine.day.stats$bin.acc <- ifelse(is.na(mine.day.stats$CLASSIFICATION), 0, 1)
+
+head(subset(mine.day.stats, p.acc==1.0))
+```
+
+```{r two.mine.plot}
+table(mine.day.stats$CLASSIFICATION)
 
 ggplot(mine.day.stats) + 
-  geom_point(aes(x=trailing.accidents,y=trailing.violations))
+  geom_segment(data=
+                 mine.day.stats[
+                   mine.day.stats$bin.acc==1.0 & grepl('FIRE |IGNITION', mine.day.stats$CLASSIFICATION)
+                    ,
+                    ]
+               , aes(x=op.dt,xend=op.dt, y=150, yend=0),color='yellow') +
+  geom_line(aes(x=op.dt,y=trailing.violations)) + 
+  geom_line(aes(x=op.dt,y=trailing.accidents),color='red') +
+  geom_line(aes(x=op.dt,y=trailing.inspections),color='blue') +
+  facet_grid(CURRENT_MINE_NAME~.) 
+
+ggplot(mine.day.stats) + 
+  geom_point(aes(x=trailing.accidents,y=trailing.violations)) + stat_smooth(aes(x=trailing.accidents,y=trailing.violations))
+
+ggplot(mine.day.stats[mine.day.stats$mine==4601318, ]) + geom_line(aes(x=op.dt, y=trailing.violations), color='red') 
+
+```
+
+```{r logit}
+logit.acc <- glm(bin.acc ~ trailing.accidents + trailing.violations + trailing.inspections, data = mine.day.stats, family = "binomial")
+summary(logit.acc)
+confint(logit.acc)
+
 ```
