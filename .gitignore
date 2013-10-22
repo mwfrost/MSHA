@@ -24,6 +24,7 @@
 # MSHA Source Files #
 ######################
 *.TXT
+*.csv
 
 # OS generated files #
 ######################
