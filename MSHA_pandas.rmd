@@ -11,6 +11,8 @@ require(lubridate)
 require(xtable)
 require(scales)
 require(RJSONIO)
+require(survival)
+require(TestSurvRec)
 
 setwd('~/Code/MSHA/')
 source('./lib/calendarHeat.r')
@@ -52,23 +54,24 @@ adat$accident.dt <- ymd(gsub('-','/', gsub(' 00:00:00','',adat$ACCIDENT_DT)))
 trailing.events <- function(mine, acc.dt=now(),trailing.days=90 ){
       d <- data.frame(mine, acc.dt)
       ddply(d, .(mine, acc.dt), function(x){ 
-      c(trailing.accidents=nrow(subset(adat, MINE_ID == x$mine 
+      c(
+        trailing.accidents=nrow(subset(adat, MINE_ID == x$mine 
                                    & accident.dt < x$acc.dt
                                    & accident.dt > x$acc.dt - ddays(trailing.days)
                                    )),
-    trailing.violations=nrow(subset(vdat, MINE_ID == x$mine 
+        trailing.violations=nrow(subset(vdat, MINE_ID == x$mine 
                                    & violation.occur.dt < x$acc.dt
                                    & violation.occur.dt > x$acc.dt - ddays(trailing.days)
                                    )),
-    trailing.injuries=sum(subset(vdat, MINE_ID == x$mine 
+        trailing.injuries=sum(subset(vdat, MINE_ID == x$mine 
                                    & violation.occur.dt < x$acc.dt
                                    & violation.occur.dt > x$acc.dt - ddays(trailing.days)
                                    )$NO_INJURIES,na.rm = TRUE),  
-    trailing.lost.days=sum(subset(vdat, MINE_ID == x$mine 
+        trailing.lost.days=sum(subset(vdat, MINE_ID == x$mine 
                                    & violation.occur.dt < x$acc.dt
                                    & violation.occur.dt > x$acc.dt - ddays(trailing.days)
                                    )$DAYS_LOST,na.rm = TRUE), 
-     trailing.inspections=nrow(subset(idat, MINE_ID == x$mine 
+        trailing.inspections=nrow(subset(idat, MINE_ID == x$mine 
                                    & inspection.begin.dt < x$acc.dt
                                    & inspection.begin.dt > x$acc.dt - ddays(trailing.days)
                                    ))       
@@ -113,7 +116,7 @@ TODO: currenty ignoring the problems caused by multiple accidents per day
 TODO: This step could probably be much faster as a pandas aggregation pipeline.
 
 ```{r mine.day.stats}
-head(trailing.events(mine.days[1:10,'MINE_ID'], mine.days[1:10, 'mine.day'], 30))
+# head(trailing.events(mine.days[1:10,'MINE_ID'], mine.days[1:10, 'mine.day'], 30))
 
 mine.day.stats <- trailing.events(mine.days[mine.days$MINE_ID %in% c(4609060,4601318),'MINE_ID'], mine.days[mine.days$MINE_ID %in% c(4609060,4601318), 'mine.day'], 30)
 # acc.dt is now op.dt
@@ -165,9 +168,41 @@ ggplot(mine.day.stats[mine.day.stats$mine==4601318, ]) + geom_line(aes(x=op.dt, 
 
 ```
 
+Trying the `glm` library's logit model
+
 ```{r logit}
-logit.acc <- glm(bin.acc ~ trailing.accidents + trailing.violations + trailing.inspections, data = mine.day.stats, family = "binomial")
+logit.acc <- glm(bin.acc ~ trailing.violations + trailing.accidents, data = mine.day.stats, family = "binomial")
 summary(logit.acc)
 confint(logit.acc)
 
+mine.day.stats$pred.acc <- predict(logit.acc, mine.day.stats[,c('trailing.violations','trailing.accidents')])
+
+ggplot(mine.day.stats) + geom_point(aes(x=trailing.violations, y=pred.acc, color=trailing.accidents))
+
 ```
+
+Survival analysis approach
+
+Data format explained [here](http://stats.stackexchange.com/questions/59636/how-do-you-prepare-longitudinal-data-for-survival-analysis)
+Instead of day-by-day records, calculate accident-free periods with start and end dates, and assign a status of 1 for each accident
+
+```{r survival}
+# transform accident records into periods
+# each accident is the end date of a period, and the preceding accident is the maximum date less than it
+
+periods <-data.frame(
+      MINE_ID=adat$MINE_ID, 
+      tstop =adat$accident.dt)
+
+periods <- ddply(periods, .(MINE_ID, tstop), function(x) c(status=1, tstart=max(periods[periods$MINE_ID==x$MINE_ID & periods$tstop < x$tstop,'tstop'])))
+
+periods$time <- as.numeric(periods$tstop - periods$tstart)/(3600*24)
+periods$time <- ifelse(IsInf(periods$time), NULL, periods$time)
+periods$time <- ifelse(is.infinite(periods$time), NA, periods$time)
+periods$id <- periods$MINE_ID
+
+plot(survfit(Surv(time, status) ~ 1, data=periods[periods$id %in% periods[1:20,'id'],] ), 
+         conf.int=FALSE, mark.time=FALSE)
+
+```
+
