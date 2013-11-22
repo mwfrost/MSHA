@@ -49,7 +49,40 @@ adat$accident.dt <- ymd(gsub('-','/', gsub(' 00:00:00','',adat$ACCIDENT_DT)))
 ```
 
 
-```{r trailing.violations}
+
+Every day of operation for every mine needs a record, so we can try to identify any differences between the days without accidents and those with. We don't have the full span of operating days, though. One way to fake it is to run the span between the first and last recorded inspections for each mine
+
+```{r mine.days}
+# Create an index of every day from the first inspection to the last inspection
+
+# x is the data frame of inspections
+fill.days <- function(x){
+  data.frame(
+    mine=x$MINE_ID[1],
+    mine.day=seq(min(x$inspection.begin.dt), max(x$inspection.begin.dt), by ="day")
+             )
+  }
+mine.days <- ddply(idat, .(MINE_ID), fill.days) 
+mine.days$mine <- NULL
+
+# Tests
+# fill.days(idat[idat$MINE_ID==4609060,])
+
+# by(idat[idat$MINE_ID %in% c(4609060,4601318),], idat[idat$MINE_ID %in% c(4609060,4601318),'MINE_ID'], fill.days)
+
+
+
+
+```
+
+Now that there's a unique record for every day of operation (sort of), calculate the trailing accidents, violations, and inspections for each mine/day, then join all the accident records to determine which days involved accidents.
+
+TODO: currently ignoring the problems caused by multiple accidents per day
+
+TODO: This step could probably be much faster as a pandas aggregation pipeline.
+
+The following function is too slow im ddply(), and should be outsourced to pandas. 
+```{r trailing.events}
 
 trailing.events <- function(mine, acc.dt=now(),trailing.days=90 ){
       d <- data.frame(mine, acc.dt)
@@ -86,34 +119,6 @@ trailing.events <- function(mine, acc.dt=now(),trailing.days=90 ){
 # trailing.events(adat[1:10,'MINE_ID'], adat[1:10, 'accident.dt'], 30)
 
 ```
-
-Every day of operation for every mine needs a record, so we can try to identify any differences between the days without accidents and those with. We don't have the full span of operating days, though. One way to fake it is to run the span between the first and last recorded inspections for each mine
-
-```{r mine.days}
-
-# x is the data frame of inspections
-fill.days <- function(x){
-  data.frame(
-    mine=x$MINE_ID[1],
-    mine.day=seq(min(x$inspection.begin.dt), max(x$inspection.begin.dt), by ="day")
-             )
-  }
-# Tests
-# fill.days(idat[idat$MINE_ID==4609060,])
-
-# by(idat[idat$MINE_ID %in% c(4609060,4601318),], idat[idat$MINE_ID %in% c(4609060,4601318),'MINE_ID'], fill.days)
-
-mine.days <- ddply(idat, .(MINE_ID), fill.days) 
-mine.days$mine <- NULL
-
-
-```
-
-Now that there's a unique record for every day of operation (sort of), calculate the trailing accidents, violations, and inspections for each mine/day, then join all the accident records to determine which days involved accidents.
-
-TODO: currenty ignoring the problems caused by multiple accidents per day
-
-TODO: This step could probably be much faster as a pandas aggregation pipeline.
 
 ```{r mine.day.stats}
 # head(trailing.events(mine.days[1:10,'MINE_ID'], mine.days[1:10, 'mine.day'], 30))
