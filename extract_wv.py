@@ -95,7 +95,7 @@ a_days.tail(10)
 ia_days = pd.merge(i_days, a_days, how='left', left_index= True , right_index= True)
 # successfully processed 63,252,285 records in between 3 and 5 hours
 
-ia_days.to_csv('data/all_ia_days.csv',index='FALSE')
+
 
 
 
