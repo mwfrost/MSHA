@@ -36,11 +36,12 @@ Pick a few mines and plot their profiles
 
 ```{r sample.plots}
 # Use mines with abundant data
-sample_mines <- subset(ddply(op_days, .(MINE_ID), nrow), V1 > 4000)$MINE_ID
+sample.mines <- subset(ddply(op_days, .(MINE_ID), summarize, vsum=sum(vcount)), vsum > 1000)$MINE_ID
 
 sample.mines <- sample(sample.mines, 3)
+sample.mines
 
-sample.dat <- op_days[op_days$MINE_ID %in% sample.mines,]
+sample.dat <- op_days[op_days$MINE_ID %in% sample.mines & op_days$op_year>2009,]
 ggplot(sample.dat, aes(x=fakeday)) + 
     geom_line(aes( y=a30), color='red') + 
     geom_line(aes(y=a90), color='red', linetype='dashed') + 
