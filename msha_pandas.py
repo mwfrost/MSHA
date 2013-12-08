@@ -76,10 +76,10 @@ i_days.xs(4601318).tail(20)
 
 # Accidents
 def a_counter(grouped):
-    se = grouped.set_index('ACCIDENT_DT')['DOCUMENT_NO']
+    se = grouped.set_index('ACCIDENT_DT')['DEGREE_INJURY_CD']
     # se is the time series of accident dates restricted to a single MINE_ID
     se = se.resample("D")
-    df = pd.DataFrame({'document_no':se, 'a90':pd.rolling_count(se, 90), 'a30':pd.rolling_count(se, 30)})
+    df = pd.DataFrame({'degree_injury_cd':se, 'a90':pd.rolling_count(se, 90), 'a30':pd.rolling_count(se, 30)})
     # TODO: include a sum of injury counts by day
     return df
 
@@ -91,55 +91,59 @@ df_test.tail(10)
 a_days = accidents.groupby('MINE_ID').apply(a_counter)
 a_days.tail(10)
 
+
+
+
+
+
 # Violations
 violations.VIOLATION_NO = violations.VIOLATION_NO.convert_objects(convert_numeric=True)
 
 # to find a date: 
 violations[:][(violations['VIOLATION_OCCUR_DT']=='20130819') & (violations['MINE_ID']==4601456)]
 violations['VIOLATION_NO'][(violations['VIOLATION_OCCUR_DT']=='20130819') & (violations['MINE_ID']==4601456)]
+v_test=violations[:][violations['MINE_ID'].isin([4601318, 94601456])]
 
 
+grouped = violations.groupby(['MINE_ID','VIOLATION_OCCUR_DT'])
+v_days=grouped['VIOLATION_NO'].agg({'vcount':np.size})
+v_days.reset_index(level=[0], inplace=True)
 
-# Scratch work
-v_test=violations[:][violations['MINE_ID'].isin([4601318])].tail(20)
-grouped = v_test.groupby('MINE_ID')
-se = grouped.set_index('VIOLATION_OCCUR_DT')['VIOLATION_NO']
-se = se.resample('D')
+# Resample and fill non-violation days
+def _sum(x):
+    if len(x) == 0: return 0
+    else: return sum(x)
 
-a_test=accidents[:][accidents['MINE_ID'].isin([4601318])].tail(20)
-a_grouped = a_test.groupby('MINE_ID')
-a_se = a_grouped.set_index('ACCIDENT_DT')['DOCUMENT_NO']
-a_se = a_se.resample("D")
+v_days = v_days.groupby(['MINE_ID']).resample('D',how=_sum)
+del v_days['MINE_ID']
 
+v30 = v_days.apply(lambda x: pd.rolling_sum(x,30,min_periods=1))
+v30.columns = ['v30']
+v90 = v_days.apply(lambda x: pd.rolling_sum(x,90,min_periods=1))
+v90.columns = ['v90']
 
-def v_counter(grouped):
-    se = grouped.set_index('VIOLATION_OCCUR_DT')['VIOLATION_NO']
-    # se is the time series of violation dates restricted to a single MINE_ID
-    se = se.resample("D")
-    df = pd.DataFrame({'violation_no':se, 'v90':pd.rolling_count(se, 90), 'v30':pd.rolling_count(se, 30)})
-    # TODO: add attributes to characterize violations
-    return df
+v_days['v30'] = v30.v30
+v_days['v90'] = v90.v90
 
-# Test:
-df_test = violations[:][violations['MINE_ID'].isin([4601318, 4601456])]
-df_test = df_test.groupby('MINE_ID').apply(v_counter)
-df_test.tail(10)
+v_days.head(30)
 
-# Run all the violations:
-v_days = violations.groupby('MINE_ID').apply(v_counter)
-v_days.tail(10)
+# Merge accidents to inspections and violations
 
+# First, rename all the index keys
+i_days.index.names = ['MINE_ID','OP_DT']
+a_days.index.names = ['MINE_ID','OP_DT']
+v_days.index.names = ['MINE_ID','OP_DT']
 
-# Merge accidents to inspections
-# could be time-consuming
 ia_days = pd.merge(i_days, a_days, how='left', left_index= True , right_index= True)
+iav_days = pd.merge(ia_days, v_days, how='left', left_index=True, right_index=True)
 # with the entire US data set, it processed 63,252,285 records in between 3 and 5 hours
 
-ia_days.to_csv('data/ia_days.csv',index='FALSE')
 
-# Convert objects to R
+iav_days.to_csv('data/iav_days.csv',index='FALSE')
 
+# TODO: Convert objects to R
 
+r_dataframe = com.convert_to_r_dataframe(iav_days)
 
 
 

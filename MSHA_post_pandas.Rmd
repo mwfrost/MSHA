@@ -1,0 +1,223 @@
+Analysis of panda-provided Modeled Data
+========================================================
+
+
+```{r}
+require(reshape)
+require(plyr)
+require(ggplot2)
+require(lubridate)
+require(xtable)
+require(scales)
+require(RJSONIO)
+require(survival)
+require(TestSurvRec)
+
+setwd('~/Code/MSHA/')
+source('./lib/calendarHeat.r')
+Sys.setlocale(locale="C")
+```
+
+```{r read.csv.files}
+op_days <- read.csv('data/iav_days.csv', stringsAsFactors=FALSE)
+
+op_days$op_date <- gsub('-','/', gsub(' 00:00:00','',op_days$OP_DT))
+op_days$op_date <- ymd(op_days$op_date)
+
+op_days$op_year <- year(op_days$op_date)
+op_days$op_month <- month(op_days$op_date)
+op_days$op_day <- day(op_days$op_date)
+
+op_days$fakeday <- ymd(paste('2012',op_days$op_month,op_days$op_day,sep='/'))
+
+```
+
+Pick a few mines and plot their profiles
+
+```{r sample.plots}
+# Use mines with abundant data
+sample_mines <- subset(ddply(op_days, .(MINE_ID), nrow), V1 > 4000)$MINE_ID
+
+sample.mines <- sample(sample.mines, 3)
+
+sample.dat <- op_days[op_days$MINE_ID %in% sample.mines,]
+ggplot(sample.dat, aes(x=fakeday)) + 
+    geom_line(aes( y=a30), color='red') + 
+    geom_line(aes(y=a90), color='red', linetype='dashed') + 
+    geom_line(aes(y=i30), color='green')+
+    geom_line(aes(y=v30), color='orange')+
+  facet_grid(op_year~MINE_ID)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+Every day of operation for every mine needs a record, so we can try to identify any differences between the days without accidents and those with. We don't have the full span of operating days, though. One way to fake it is to run the span between the first and last recorded inspections for each mine
+
+```{r mine.days}
+# Create an index of every day from the first inspection to the last inspection
+
+# x is the data frame of inspections
+fill.days <- function(x){
+  data.frame(
+    mine=x$MINE_ID[1],
+    mine.day=seq(min(x$inspection.begin.dt), max(x$inspection.begin.dt), by ="day")
+             )
+  }
+mine.days <- ddply(idat, .(MINE_ID), fill.days) 
+mine.days$mine <- NULL
+
+# Tests
+# fill.days(idat[idat$MINE_ID==4609060,])
+
+# by(idat[idat$MINE_ID %in% c(4609060,4601318),], idat[idat$MINE_ID %in% c(4609060,4601318),'MINE_ID'], fill.days)
+
+
+
+
+```
+
+Now that there's a unique record for every day of operation (sort of), calculate the trailing accidents, violations, and inspections for each mine/day, then join all the accident records to determine which days involved accidents.
+
+TODO: currently ignoring the problems caused by multiple accidents per day
+
+TODO: This step could probably be much faster as a pandas aggregation pipeline.
+
+The following function is too slow im ddply(), and should be outsourced to pandas. 
+```{r trailing.events}
+
+trailing.events <- function(mine, acc.dt=now(),trailing.days=90 ){
+      d <- data.frame(mine, acc.dt)
+      ddply(d, .(mine, acc.dt), function(x){ 
+      c(
+        trailing.accidents=nrow(subset(adat, MINE_ID == x$mine 
+                                   & accident.dt < x$acc.dt
+                                   & accident.dt > x$acc.dt - ddays(trailing.days)
+                                   )),
+        trailing.violations=nrow(subset(vdat, MINE_ID == x$mine 
+                                   & violation.occur.dt < x$acc.dt
+                                   & violation.occur.dt > x$acc.dt - ddays(trailing.days)
+                                   )),
+        trailing.injuries=sum(subset(vdat, MINE_ID == x$mine 
+                                   & violation.occur.dt < x$acc.dt
+                                   & violation.occur.dt > x$acc.dt - ddays(trailing.days)
+                                   )$NO_INJURIES,na.rm = TRUE),  
+        trailing.lost.days=sum(subset(vdat, MINE_ID == x$mine 
+                                   & violation.occur.dt < x$acc.dt
+                                   & violation.occur.dt > x$acc.dt - ddays(trailing.days)
+                                   )$DAYS_LOST,na.rm = TRUE), 
+        trailing.inspections=nrow(subset(idat, MINE_ID == x$mine 
+                                   & inspection.begin.dt < x$acc.dt
+                                   & inspection.begin.dt > x$acc.dt - ddays(trailing.days)
+                                   ))       
+        )
+      }
+    )
+}
+
+# Tests
+# trailing.events(c(4601318, 4601456) , ymd(c('2005-09-08', '2011-08-05')), 30)
+
+# trailing.events(adat[1:10,'MINE_ID'], adat[1:10, 'accident.dt'], 30)
+
+```
+
+```{r mine.day.stats}
+# head(trailing.events(mine.days[1:10,'MINE_ID'], mine.days[1:10, 'mine.day'], 30))
+
+mine.day.stats <- trailing.events(mine.days[mine.days$MINE_ID %in% c(4609060,4601318),'MINE_ID'], mine.days[mine.days$MINE_ID %in% c(4609060,4601318), 'mine.day'], 30)
+# acc.dt is now op.dt
+names(mine.day.stats) <- gsub('acc.dt','op.dt', names(mine.day.stats))
+
+mine.day.stats <- merge(mine.day.stats, adat[,c('MINE_ID','accident.dt','DEGREE_INJURY_CD','CLASSIFICATION')], by.x=c('mine','op.dt'), by.y=c('MINE_ID','accident.dt'), all.x=TRUE)
+
+head(subset(mine.day.stats, !is.na(DEGREE_INJURY_CD)))
+```
+
+
+
+Join some useful categories to the per mine/day stats and flag accident days
+
+```{r mine.joins}
+mine.day.stats <- merge(mine.day.stats, 
+                        mdat[
+                          ,
+                          c('MINE_ID','CURRENT_MINE_NAME','COAL_METAL_IND','CURRENT_OPERATOR_NAME','CURRENT_CONTROLLER_NAME','STATE','FIPS_CNTY_NM','NO_EMPLOYEES')
+                             ] ,
+                        by.x=c('mine'),
+                        by.y=c('MINE_ID')
+                        )
+mine.day.stats$bin.inj <- ifelse(is.na(mine.day.stats$DEGREE_INJURY_CD), 0, 1)
+mine.day.stats$bin.acc <- ifelse(is.na(mine.day.stats$CLASSIFICATION), 0, 1)
+
+head(subset(mine.day.stats, p.acc==1.0))
+```
+
+```{r two.mine.plot}
+table(mine.day.stats$CLASSIFICATION)
+
+ggplot(mine.day.stats) + 
+  geom_segment(data=
+                 mine.day.stats[
+                   mine.day.stats$bin.acc==1.0 & grepl('FIRE |IGNITION', mine.day.stats$CLASSIFICATION)
+                    ,
+                    ]
+               , aes(x=op.dt,xend=op.dt, y=150, yend=0),color='yellow') +
+  geom_line(aes(x=op.dt,y=trailing.violations)) + 
+  geom_line(aes(x=op.dt,y=trailing.accidents),color='red') +
+  geom_line(aes(x=op.dt,y=trailing.inspections),color='blue') +
+  facet_grid(CURRENT_MINE_NAME~.) 
+
+ggplot(mine.day.stats) + 
+  geom_point(aes(x=trailing.accidents,y=trailing.violations)) + stat_smooth(aes(x=trailing.accidents,y=trailing.violations))
+
+ggplot(mine.day.stats[mine.day.stats$mine==4601318, ]) + geom_line(aes(x=op.dt, y=trailing.violations), color='red') 
+
+```
+
+Trying the `glm` library's logit model
+
+```{r logit}
+logit.acc <- glm(bin.acc ~ trailing.violations + trailing.accidents, data = mine.day.stats, family = "binomial")
+summary(logit.acc)
+confint(logit.acc)
+
+mine.day.stats$pred.acc <- predict(logit.acc, mine.day.stats[,c('trailing.violations','trailing.accidents')])
+
+ggplot(mine.day.stats) + geom_point(aes(x=trailing.violations, y=pred.acc, color=trailing.accidents))
+
+```
+
+Survival analysis approach
+
+Data format explained [here](http://stats.stackexchange.com/questions/59636/how-do-you-prepare-longitudinal-data-for-survival-analysis)
+Instead of day-by-day records, calculate accident-free periods with start and end dates, and assign a status of 1 for each accident
+
+```{r survival}
+# transform accident records into periods
+# each accident is the end date of a period, and the preceding accident is the maximum date less than it
+
+periods <-data.frame(
+      MINE_ID=adat$MINE_ID, 
+      tstop =adat$accident.dt)
+
+periods <- ddply(periods, .(MINE_ID, tstop), function(x) c(status=1, tstart=max(periods[periods$MINE_ID==x$MINE_ID & periods$tstop < x$tstop,'tstop'])))
+
+periods$time <- as.numeric(periods$tstop - periods$tstart)/(3600*24)
+periods$time <- ifelse(IsInf(periods$time), NULL, periods$time)
+periods$time <- ifelse(is.infinite(periods$time), NA, periods$time)
+periods$id <- periods$MINE_ID
+
+plot(survfit(Surv(time, status) ~ 1, data=periods[periods$id %in% periods[1:20,'id'],] ), 
+         conf.int=FALSE, mark.time=FALSE)
+
+```
+
