@@ -8,8 +8,8 @@
 *.so
 *.history
 
-.Rhistory
-.gitignore
+*.Rhistory
+*.gitignore
 
 # Packages #
 ############
