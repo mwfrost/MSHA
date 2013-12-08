@@ -24,6 +24,7 @@ The `/data/msha_source` folder contains the large source files and their definit
 *2013-11-21*
 The R script I built to count inspections, violations, and accidents inside a moving window was way too slow. I have rebuilt that functionality in python pandas, and it's fast enough that now it's no longer necessary to isolate subsets of the records. 
 
-I may bring the operating day records into R for graphing and modeling.
+*2013-12-08*
+`msha_pandas.py` is now doing the work of calcuating daily statistics. It exports a csv file that `MSHA_post_pandas.Rmd` processes.
 
 

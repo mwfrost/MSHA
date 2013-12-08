@@ -143,7 +143,5 @@ iav_days.to_csv('data/iav_days.csv',index='FALSE')
 
 # TODO: Convert objects to R
 
-r_dataframe = com.convert_to_r_dataframe(iav_days)
-
 
 
