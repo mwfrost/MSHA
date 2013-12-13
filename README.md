@@ -27,4 +27,9 @@ The R script I built to count inspections, violations, and accidents inside a mo
 *2013-12-08*
 `msha_pandas.py` is now doing the work of calcuating daily statistics. It exports a csv file that `MSHA_post_pandas.Rmd` processes.
 
+*2013-12-13*
+Even using pandas for data prep was not enough to keep R happy. I rewrote the nested MINE_ID & VIOLATION_OCCUR_DT indexes, and added a logit analysis in pandas. The next step is to approach it not as a regression problem with trailing events as independent variables, but as a survival analysis problem.
+
+
+
 
