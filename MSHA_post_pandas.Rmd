@@ -9,7 +9,7 @@ require(ggplot2)
 require(lubridate)
 require(xtable)
 require(scales)
-require(RJSONIO)
+require(glmnet)
 require(survival)
 require(TestSurvRec)
 
@@ -19,6 +19,8 @@ Sys.setlocale(locale="C")
 ```
 
 ```{r read.csv.files}
+
+mines <-  read.csv('data/wv_mines.csv', stringsAsFactors=FALSE)
 op_days <- read.csv('data/iav_days.csv', stringsAsFactors=FALSE)
 
 op_days$op_date <- gsub('-','/', gsub(' 00:00:00','',op_days$OP_DT))
@@ -54,94 +56,20 @@ ggplot(sample.dat, aes(x=fakeday)) +
 
 
 
+Trying the `glm` library's logit model
 
+```{r logit}
+logit.acc <- glm(has_acc ~ a30 + v30 + i30, data = op_days, family = "binomial")
+summary(logit.acc)
+confint(logit.acc)
 
+mine.day.stats$pred.acc <- predict(logit.acc, op_days[,c('v30','a30')])
 
-
-
-
-
-Every day of operation for every mine needs a record, so we can try to identify any differences between the days without accidents and those with. We don't have the full span of operating days, though. One way to fake it is to run the span between the first and last recorded inspections for each mine
-
-```{r mine.days}
-# Create an index of every day from the first inspection to the last inspection
-
-# x is the data frame of inspections
-fill.days <- function(x){
-  data.frame(
-    mine=x$MINE_ID[1],
-    mine.day=seq(min(x$inspection.begin.dt), max(x$inspection.begin.dt), by ="day")
-             )
-  }
-mine.days <- ddply(idat, .(MINE_ID), fill.days) 
-mine.days$mine <- NULL
-
-# Tests
-# fill.days(idat[idat$MINE_ID==4609060,])
-
-# by(idat[idat$MINE_ID %in% c(4609060,4601318),], idat[idat$MINE_ID %in% c(4609060,4601318),'MINE_ID'], fill.days)
-
-
-
+ggplot(op_days) + geom_point(aes(x=v30, y=pred.acc, color=a30))
 
 ```
 
-Now that there's a unique record for every day of operation (sort of), calculate the trailing accidents, violations, and inspections for each mine/day, then join all the accident records to determine which days involved accidents.
 
-TODO: currently ignoring the problems caused by multiple accidents per day
-
-TODO: This step could probably be much faster as a pandas aggregation pipeline.
-
-The following function is too slow im ddply(), and should be outsourced to pandas. 
-```{r trailing.events}
-
-trailing.events <- function(mine, acc.dt=now(),trailing.days=90 ){
-      d <- data.frame(mine, acc.dt)
-      ddply(d, .(mine, acc.dt), function(x){ 
-      c(
-        trailing.accidents=nrow(subset(adat, MINE_ID == x$mine 
-                                   & accident.dt < x$acc.dt
-                                   & accident.dt > x$acc.dt - ddays(trailing.days)
-                                   )),
-        trailing.violations=nrow(subset(vdat, MINE_ID == x$mine 
-                                   & violation.occur.dt < x$acc.dt
-                                   & violation.occur.dt > x$acc.dt - ddays(trailing.days)
-                                   )),
-        trailing.injuries=sum(subset(vdat, MINE_ID == x$mine 
-                                   & violation.occur.dt < x$acc.dt
-                                   & violation.occur.dt > x$acc.dt - ddays(trailing.days)
-                                   )$NO_INJURIES,na.rm = TRUE),  
-        trailing.lost.days=sum(subset(vdat, MINE_ID == x$mine 
-                                   & violation.occur.dt < x$acc.dt
-                                   & violation.occur.dt > x$acc.dt - ddays(trailing.days)
-                                   )$DAYS_LOST,na.rm = TRUE), 
-        trailing.inspections=nrow(subset(idat, MINE_ID == x$mine 
-                                   & inspection.begin.dt < x$acc.dt
-                                   & inspection.begin.dt > x$acc.dt - ddays(trailing.days)
-                                   ))       
-        )
-      }
-    )
-}
-
-# Tests
-# trailing.events(c(4601318, 4601456) , ymd(c('2005-09-08', '2011-08-05')), 30)
-
-# trailing.events(adat[1:10,'MINE_ID'], adat[1:10, 'accident.dt'], 30)
-
-```
-
-```{r mine.day.stats}
-# head(trailing.events(mine.days[1:10,'MINE_ID'], mine.days[1:10, 'mine.day'], 30))
-
-mine.day.stats <- trailing.events(mine.days[mine.days$MINE_ID %in% c(4609060,4601318),'MINE_ID'], mine.days[mine.days$MINE_ID %in% c(4609060,4601318), 'mine.day'], 30)
-# acc.dt is now op.dt
-names(mine.day.stats) <- gsub('acc.dt','op.dt', names(mine.day.stats))
-
-mine.day.stats <- merge(mine.day.stats, adat[,c('MINE_ID','accident.dt','DEGREE_INJURY_CD','CLASSIFICATION')], by.x=c('mine','op.dt'), by.y=c('MINE_ID','accident.dt'), all.x=TRUE)
-
-head(subset(mine.day.stats, !is.na(DEGREE_INJURY_CD)))
-```
 
 
 
@@ -184,18 +112,6 @@ ggplot(mine.day.stats[mine.day.stats$mine==4601318, ]) + geom_line(aes(x=op.dt, 
 
 ```
 
-Trying the `glm` library's logit model
-
-```{r logit}
-logit.acc <- glm(bin.acc ~ trailing.violations + trailing.accidents, data = mine.day.stats, family = "binomial")
-summary(logit.acc)
-confint(logit.acc)
-
-mine.day.stats$pred.acc <- predict(logit.acc, mine.day.stats[,c('trailing.violations','trailing.accidents')])
-
-ggplot(mine.day.stats) + geom_point(aes(x=trailing.violations, y=pred.acc, color=trailing.accidents))
-
-```
 
 Survival analysis approach
 
